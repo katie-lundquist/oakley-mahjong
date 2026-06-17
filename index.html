@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Oakley Family Mahjong Cup</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Georgia, serif; background: #f7f3ec; color: #2d2417; }
+    select, input, textarea, button { font-family: Georgia, serif; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    // Storage using localStorage (persistent across sessions)
+    const storage = {
+      get: (key) => { try { const v = localStorage.getItem(key); return v ? { value: v } : null; } catch(e) { return null; } },
+      set: (key, value) => { try { localStorage.setItem(key, value); return true; } catch(e) { return null; } },
+    };
+    window.storage = storage;
+
+
+
+const PLAYERS = ["Alex","Brooke","Bryan","Caitlyn","David","Dick","Drew","Elana","Emily","Jack","James","Jon","Judi","Kaity","Katie","Margot","Marissa","Rick","Robbie","Robin","Sue","Tommy","Guest 1","Guest 2","Guest 3","Guest 4"];
+const ADMIN_PIN = "3395";
+const CURRENT_SEASON = "2026";
+const STORAGE_KEY = "mj-hands-2026";
+const SEASONS_KEY = "mj-seasons-2026";
+
+const H = [
+  {id:"h1",timestamp:"2024-08-01T16:45:06",winner:"Judi",players:[{name:"Bryan",score:"28"},{name:"Judi",score:"30"},{name:"Jack",score:"96"},{name:"Marissa",score:"10"}],notes:""},
+  {id:"h2",timestamp:"2024-08-01T16:46:17",winner:"Bryan",players:[{name:"Bryan",score:"38"},{name:"Jack",score:"56"},{name:"Robbie",score:"18"},{name:"Marissa",score:"36"}],notes:""},
+  {id:"h3",timestamp:"2024-08-01T16:47:35",winner:"Caitlyn",players:[{name:"Caitlyn",score:"144"},{name:"Jack",score:"40"},{name:"Robin",score:"20"},{name:"Marissa",score:"36"}],notes:""},
+  {id:"h4",timestamp:"2024-08-01T16:48:25",winner:"Jack",players:[{name:"Jack",score:"38"},{name:"Robin",score:"26"},{name:"Marissa",score:"16"},{name:"Caitlyn",score:"6"}],notes:""},
+  {id:"h5",timestamp:"2024-08-02T09:13:43",winner:"Jack",players:[{name:"Jack",score:"128"},{name:"Marissa",score:"0"},{name:"Robbie",score:"12"},{name:"Bryan",score:"48"}],notes:""},
+  {id:"h6",timestamp:"2024-08-02T09:14:35",winner:"Robbie",players:[{name:"Robbie",score:"136"},{name:"Jack",score:"40"},{name:"Marissa",score:"192"},{name:"Caitlyn",score:"28"}],notes:""},
+  {id:"h7",timestamp:"2024-08-02T09:15:35",winner:"Robin",players:[{name:"Robin",score:"56"},{name:"Robbie",score:"56"},{name:"Marissa",score:"28"},{name:"Jack",score:"44"}],notes:""},
+  {id:"h8",timestamp:"2024-08-02T09:16:33",winner:"Dead hand",players:[{name:"Robin",score:"X"},{name:"Robbie",score:"X"},{name:"Marissa",score:"X"},{name:"Jack",score:"X"}],notes:""},
+  {id:"h9",timestamp:"2024-08-02T17:58:02",winner:"Robbie",players:[{name:"Robbie",score:"26"},{name:"Marissa",score:"20"},{name:"Judi",score:"56"},{name:"Robin",score:"36"}],notes:""},
+  {id:"h10",timestamp:"2024-08-02T17:58:57",winner:"Robbie",players:[{name:"Robbie",score:"224"},{name:"Marissa",score:"12"},{name:"Judi",score:"2"},{name:"Robin",score:"12"}],notes:""},
+  {id:"h11",timestamp:"2024-08-02T21:10:29",winner:"Marissa",players:[{name:"Robbie",score:"60"},{name:"Marissa",score:"32"},{name:"Judi",score:"28"},{name:"Robin",score:"256"}],notes:""},
+  {id:"h12",timestamp:"2024-08-02T21:11:48",winner:"Jack",players:[{name:"Robbie",score:"32"},{name:"Marissa",score:"160"},{name:"Jack",score:"56"},{name:"Robin",score:"112"}],notes:""},
+  {id:"h13",timestamp:"2024-08-02T21:13:05",winner:"Dead hand",players:[{name:"Robbie",score:"X"},{name:"Marissa",score:"X"},{name:"Jack",score:"X"},{name:"Robin",score:"X"}],notes:""},
+  {id:"h14",timestamp:"2024-08-02T21:13:58",winner:"Marissa",players:[{name:"Jack",score:"8"},{name:"Marissa",score:"144"},{name:"Judi",score:"12"},{name:"Robin",score:"80"}],notes:""},
+  {id:"h15",timestamp:"2024-08-02T21:14:59",winner:"Marissa",players:[{name:"Robbie",score:"20"},{name:"Marissa",score:"72"},{name:"Judi",score:"6"},{name:"Robin",score:"40"}],notes:""},
+  {id:"h16",timestamp:"2024-08-02T21:16:38",winner:"Dead hand",players:[{name:"Robbie",score:"X"},{name:"Marissa",score:"X"},{name:"Judi",score:"X"},{name:"Robin",score:"X"}],notes:""},
+  {id:"h17",timestamp:"2024-08-02T21:17:37",winner:"Robbie",players:[{name:"Robbie",score:"72"},{name:"Marissa",score:"10"},{name:"Judi",score:"64"},{name:"Robin",score:"12"}],notes:""},
+  {id:"h18",timestamp:"2024-08-02T21:22:16",winner:"Judi",players:[{name:"Robbie",score:"4"},{name:"Marissa",score:"28"},{name:"Judi",score:"32"},{name:"Robin",score:"24"}],notes:""},
+  {id:"h19",timestamp:"2024-08-02T21:23:17",winner:"Robin",players:[{name:"Robbie",score:"20"},{name:"Marissa",score:"32"},{name:"Judi",score:"48"},{name:"Robin",score:"84"}],notes:""},
+  {id:"h20",timestamp:"2024-08-03T17:55:52",winner:"Judi",players:[{name:"Judi",score:"68"},{name:"Robbie",score:"48"},{name:"Marissa",score:"36"},{name:"Caitlyn",score:"6"}],notes:""},
+  {id:"h21",timestamp:"2024-08-03T21:22:51",winner:"Robbie",players:[{name:"Marissa",score:"80"},{name:"Robin",score:"24"},{name:"Robbie",score:"24"},{name:"Judi",score:"76"}],notes:""},
+  {id:"h22",timestamp:"2024-08-03T22:10:11",winner:"Robbie",players:[{name:"Jack",score:"10"},{name:"Marissa",score:"6"},{name:"Robbie",score:"72"},{name:"Judi",score:"4"}],notes:""},
+  {id:"h23",timestamp:"2024-08-03T22:11:14",winner:"Robbie",players:[{name:"Jack",score:"156"},{name:"Robin",score:"96"},{name:"Robbie",score:"56"},{name:"Marissa",score:"4"}],notes:""},
+  {id:"h24",timestamp:"2024-08-03T22:12:16",winner:"Robbie",players:[{name:"Jack",score:"32"},{name:"Robin",score:"16"},{name:"Robbie",score:"96"},{name:"Marissa",score:"14"}],notes:""},
+  {id:"h25",timestamp:"2024-12-25T14:45:04",winner:"Rick",players:[{name:"Rick",score:"80"},{name:"Jon",score:"32"},{name:"Brooke",score:"10"},{name:"Tommy",score:"16"}],notes:""},
+  {id:"h26",timestamp:"2024-12-25T15:10:59",winner:"Tommy",players:[{name:"Tommy",score:"108"},{name:"Brooke",score:"12"},{name:"Rick",score:"608"},{name:"Jon",score:"40"}],notes:""},
+  {id:"h27",timestamp:"2024-12-25T18:47:49",winner:"Katie",players:[{name:"Katie",score:"144"},{name:"Margot",score:"576"},{name:"Rick",score:"12"},{name:"Jon",score:"2"}],notes:""},
+  {id:"h28",timestamp:"2024-12-25T19:07:03",winner:"Margot",players:[{name:"Margot",score:"52"},{name:"Rick",score:"80"},{name:"Jon",score:"16"},{name:"Katie",score:"80"}],notes:""},
+  {id:"h29",timestamp:"2024-12-25T19:42:15",winner:"Rick",players:[{name:"Katie",score:"144"},{name:"Margot",score:"72"},{name:"Rick",score:"24"},{name:"Jon",score:"16"}],notes:"Katie, Margot, and Jon all ended up with 12 tiles"},
+  {id:"h30",timestamp:"2024-12-25T20:02:33",winner:"Rick",players:[{name:"Rick",score:"64"},{name:"Jon",score:"8"},{name:"Katie",score:"36"},{name:"Margot",score:"6"}],notes:""},
+  {id:"h31",timestamp:"2024-12-25T20:18:53",winner:"Rick",players:[{name:"Rick",score:"68"},{name:"Margot",score:"24"},{name:"Jon",score:"20"},{name:"Katie",score:"40"}],notes:""},
+  {id:"h32",timestamp:"2024-12-28T12:20:27",winner:"Katie",players:[{name:"Jon",score:"16"},{name:"Katie",score:"216"},{name:"Rick",score:"32"},{name:"Judi",score:"80"}],notes:""},
+  {id:"h33",timestamp:"2024-12-28T12:34:37",winner:"Margot",players:[{name:"Margot",score:"30"},{name:"Katie",score:"8"},{name:"Rick",score:"44"},{name:"Judi",score:"12"}],notes:""},
+  {id:"h34",timestamp:"2024-12-28T12:50:22",winner:"Rick",players:[{name:"Rick",score:"28"},{name:"Judi",score:"16"},{name:"Margot",score:"2"},{name:"Jon",score:"14"}],notes:""},
+  {id:"h35",timestamp:"2024-12-28T13:05:57",winner:"Katie",players:[{name:"Katie",score:"72"},{name:"Jon",score:"4"},{name:"Rick",score:"128"},{name:"Judi",score:"128"}],notes:""},
+];
+
+async function loadHands() { try { const r = await window.storage.get(STORAGE_KEY); return r ? JSON.parse(r.value) : []; } catch(e) { return []; } }
+async function saveHands(h) { try { await window.storage.set(STORAGE_KEY, JSON.stringify(h)); } catch(e) {} }
+async function loadSeasons() { try { const r = await window.storage.get(SEASONS_KEY); return r ? JSON.parse(r.value) : []; } catch(e) { return []; } }
+async function saveSeasons(s) { try { await window.storage.set(SEASONS_KEY, JSON.stringify(s)); } catch(e) {} }
+
+function computeLeaderboard(hands) {
+  const stats = {};
+  for (const h of hands) {
+    for (const p of h.players) {
+      if (!p.name) continue;
+      if (!stats[p.name]) stats[p.name] = { name: p.name, totalScore: 0, scoringHands: 0, mahjongs: 0, totalHands: 0 };
+      stats[p.name].totalHands++;
+      if (h.winner !== "Dead hand") {
+        stats[p.name].scoringHands++;
+        stats[p.name].totalScore += Number(p.score) || 0;
+        if (h.winner === p.name) stats[p.name].mahjongs++;
+      }
+    }
+  }
+  const players = Object.values(stats);
+  const qualified = players.filter(p => p.totalHands >= 3);
+  const unqualified = players.filter(p => p.totalHands < 3 && p.totalHands > 0);
+  for (const p of players) {
+    p.avgScore = p.scoringHands > 0 ? p.totalScore / p.scoringHands : 0;
+    p.mahjongRate = p.scoringHands > 0 ? p.mahjongs / p.scoringHands : 0;
+  }
+  const rankBy = (arr, key, asc) => {
+    const sorted = [...arr].sort((a, b) => asc ? a[key] - b[key] : b[key] - a[key]);
+    let rank = 1;
+    for (let i = 0; i < sorted.length; i++) {
+      if (i > 0 && sorted[i][key] !== sorted[i-1][key]) rank = i + 1;
+      sorted[i][key + "Rank"] = rank;
+    }
+  };
+  rankBy(qualified, "avgScore", false);
+  rankBy(qualified, "mahjongRate", false);
+  for (const p of qualified) p.combinedScore = p.avgScoreRank + p.mahjongRateRank;
+  const sortedQ = [...qualified].sort((a, b) => a.combinedScore - b.combinedScore);
+  let oRank = 1;
+  for (let i = 0; i < sortedQ.length; i++) {
+    if (i > 0 && sortedQ[i].combinedScore !== sortedQ[i-1].combinedScore) oRank = i + 1;
+    sortedQ[i].overallRank = oRank;
+  }
+  return { qualified: sortedQ, unqualified };
+}
+
+function computeSummary(hands) {
+  const scoring = hands.filter(h => h.winner !== "Dead hand");
+  const dates = [...new Set(hands.map(h => h.timestamp.split("T")[0]))];
+  let highScore = 0, totalPoints = 0;
+  for (const h of scoring) for (const p of h.players) { const s = Number(p.score) || 0; if (s > highScore) highScore = s; totalPoints += s; }
+  return { totalHands: hands.length, scoringHands: scoring.length, gameDays: dates.length, highScore, totalPoints };
+}
+
+function exportCSV(hands, season) {
+  const esc = c => '"' + String(c).replace(/"/g, '""') + '"';
+  const header = ["Timestamp","Winner","P1 Name","P1 Score","P2 Name","P2 Score","P3 Name","P3 Score","P4 Name","P4 Score","Notes"];
+  const rows = hands.map(h => [h.timestamp, h.winner, h.players[0]?.name||"", h.players[0]?.score||"", h.players[1]?.name||"", h.players[1]?.score||"", h.players[2]?.name||"", h.players[2]?.score||"", h.players[3]?.name||"", h.players[3]?.score||"", h.notes||""]);
+  const csv = [header, ...rows].map(r => r.map(esc).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "oakley-mahjong-" + season + ".csv"; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function PinModal({ onSuccess, onCancel }) {
+  const [val, setVal] = useState("");
+  const [err, setErr] = useState(false);
+  const submit = () => { if (val === ADMIN_PIN) { onSuccess(); } else { setErr(true); setVal(""); } };
+  return (
+    <div style={S.overlay}>
+      <div style={S.modal}>
+        <h3 style={S.modalTitle}>Admin Access</h3>
+        <p style={S.modalSub}>Enter PIN to continue</p>
+        <input type="password" maxLength={4} value={val}
+          onChange={e => { setVal(e.target.value); setErr(false); }}
+          onKeyDown={e => e.key === "Enter" && submit()}
+          style={{ ...S.pinInput, borderColor: err ? "#e53e3e" : "#d1c4a8" }}
+          autoFocus placeholder="****" />
+        {err && <p style={S.pinErr}>Incorrect PIN</p>}
+        <div style={S.modalBtns}>
+          <button style={S.btnSec} onClick={onCancel}>Cancel</button>
+          <button style={S.btnPri} onClick={submit}>Enter</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ScoreForm({ onSubmit, editHand, onCancel }) {
+  const blank = { name: "", score: "" };
+  const [winner, setWinner] = useState(editHand ? editHand.winner : "");
+  const [players, setPlayers] = useState(editHand ? editHand.players : [{ ...blank }, { ...blank }, { ...blank }, { ...blank }]);
+  const [notes, setNotes] = useState(editHand ? editHand.notes : "");
+  const [errors, setErrors] = useState({});
+  const isDead = winner === "Dead hand";
+
+  const setPlayer = (i, f, v) => { const p = [...players]; p[i] = { ...p[i], [f]: v }; setPlayers(p); };
+  const usedNames = players.map(p => p.name).filter(Boolean);
+
+  const validate = () => {
+    const e = {};
+    if (!winner) e.winner = "Required";
+    players.forEach((p, i) => {
+      if (!p.name) e["name" + i] = "Required";
+      if (!isDead && (p.score === "" || isNaN(Number(p.score)))) e["score" + i] = "Required";
+    });
+    const names = players.map(p => p.name).filter(Boolean);
+    if (new Set(names).size !== names.length) e.dup = "Players must be unique";
+    if (!isDead && winner && !players.find(p => p.name === winner)) e.winnerMatch = "Winner must be one of the 4 players";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSubmit = () => {
+    if (!validate()) return;
+    onSubmit({
+      winner, notes,
+      players: players.map(p => ({ name: p.name, score: isDead ? "X" : p.score })),
+      timestamp: editHand ? editHand.timestamp : new Date().toISOString(),
+      id: editHand ? editHand.id : String(Date.now()),
+    });
+  };
+
+  const opts = (idx) => PLAYERS.filter(n => !usedNames.includes(n) || n === players[idx].name);
+
+  return (
+    <div style={S.formCard}>
+      <h2 style={S.formTitle}>{editHand ? "Edit Hand" : "Submit Scores"}</h2>
+      {!editHand && (
+        <div style={S.instrBox}>
+          <div style={S.instrSection}>
+            <div style={S.instrHead}>Qualification and Scoring</div>
+            {[
+              ["Play ", <strong>3 or more hands</strong>, " to qualify for the leaderboard."],
+              ["Dead hands count toward qualification but do not affect averages or mahjong rate."],
+              ["Your ", <strong>combined score</strong>, " = avg points per hand rank + mahjong rate rank. Lower is better."],
+              [<strong>Mahjong rate</strong>, " = % of hands where you went out. Rewards consistency over volume."],
+            ].map((parts, i) => (
+              <div key={i} style={S.liRow}><span style={S.liBullet}>-</span><span>{parts.map((p,j) => <span key={j}>{p}</span>)}</span></div>
+            ))}
+          </div>
+          <div style={S.instrDivider} />
+          <div style={S.instrSection}>
+            <div style={S.instrHead}>How to submit</div>
+            {[
+              "Select who went out. For dead hands, see below.",
+              "Select all 4 players and their scores. Player order does not matter and does not need to be consistent across hands.",
+              "The winner must be one of the 4 players selected -- the form will validate this.",
+              "Add a note if anything interesting happened (optional).",
+            ].map((text, i) => (
+              <div key={i} style={S.liRow}><span style={S.liNum}>{i + 1}.</span><span>{text}</span></div>
+            ))}
+            <div style={S.liRow}><span style={S.liNum}>5.</span><span>Hit <strong>Submit Scores</strong>. Contact the admin to correct a submitted score or to add a new player to the roster.</span></div>
+          </div>
+          <div style={S.instrDivider} />
+          <div style={S.instrSection}>
+            <div style={S.instrHead}>Dead hands</div>
+            {[
+              ["Select ", <strong>Dead hand</strong>, " from the Who went out? dropdown."],
+              [<strong>Still select all 4 players</strong>, " -- this is how the hand counts toward your qualifying total."],
+              ["Score fields are hidden automatically. Do not enter 0 for a dead hand -- it would drag down your average."],
+            ].map((parts, i) => (
+              <div key={i} style={S.liRow}><span style={S.liBullet}>-</span><span>{parts.map((p,j) => <span key={j}>{p}</span>)}</span></div>
+            ))}
+          </div>
+          <div style={S.instrDivider} />
+          <div style={S.instrSection}>
+            <div style={S.instrHead}>New players</div>
+            <div style={S.liRow}><span style={S.liBullet}>-</span><span>Not on the list? Submit under a Guest slot and contact the admin to add you.</span></div>
+          </div>
+        </div>
+      )}
+
+      <div style={S.fg}>
+        <label style={S.lbl}>Who went out? <span style={S.req}>*</span></label>
+        <select style={S.sel} value={winner} onChange={e => setWinner(e.target.value)}>
+          <option value="">-- Select --</option>
+          <option value="Dead hand">Dead hand</option>
+          <optgroup label="Players">
+            {PLAYERS.map(n => <option key={n} value={n}>{n}</option>)}
+          </optgroup>
+        </select>
+        {errors.winner && <span style={S.err}>{errors.winner}</span>}
+        {errors.winnerMatch && <span style={S.err}>{errors.winnerMatch}</span>}
+      </div>
+
+      {isDead && <div style={S.deadBanner}>Dead hand -- select all 4 players below so this counts toward qualifying. No scores needed.</div>}
+
+      <div style={S.pgrid}>
+        {players.map((p, i) => (
+          <div key={i} style={S.pcell}>
+            <div style={S.plbl}>Player {i + 1}</div>
+            <select style={S.sel} value={p.name} onChange={e => setPlayer(i, "name", e.target.value)}>
+              <option value="">-- Name --</option>
+              {opts(i).map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+            {errors["name" + i] && <span style={S.err}>{errors["name" + i]}</span>}
+            {!isDead && (
+              <div>
+                <input type="number" min={0} placeholder="Score" style={S.numInput} value={p.score} onChange={e => setPlayer(i, "score", e.target.value)} />
+                {errors["score" + i] && <span style={S.err}>{errors["score" + i]}</span>}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      {errors.dup && <div style={S.err}>{errors.dup}</div>}
+
+      <div style={S.fg}>
+        <label style={S.lbl}>Anything interesting? <span style={S.opt}>(optional)</span></label>
+        <div style={S.hint}>e.g. last tile win, Seven Sisters, everyone was pure...</div>
+        <textarea style={S.ta} value={notes} onChange={e => setNotes(e.target.value)} rows={2} />
+      </div>
+
+      <div style={S.fbtns}>
+        {onCancel && <button style={S.btnSec} onClick={onCancel}>Cancel</button>}
+        <button style={S.btnPri} onClick={handleSubmit}>{editHand ? "Save Changes" : "Submit Scores"}</button>
+      </div>
+    </div>
+  );
+}
+
+function Leaderboard({ hands }) {
+  const { qualified, unqualified } = useMemo(() => computeLeaderboard(hands), [hands]);
+  const summary = useMemo(() => computeSummary(hands), [hands]);
+  const pct = r => (r * 100).toFixed(0) + "%";
+  const medal = r => r === 1 ? "1st" : r === 2 ? "2nd" : r === 3 ? "3rd" : "";
+  return (
+    <div>
+      <div style={S.sumBar}>
+        {[["Qualified", qualified.length], ["Total Hands", summary.totalHands], ["Game Days", summary.gameDays], ["High Score", summary.highScore || "--"], ["Total Points", summary.totalPoints.toLocaleString()]].map(([l, v]) => (
+          <div key={l} style={S.sumItem}><div style={S.sumVal}>{v}</div><div style={S.sumLbl}>{l}</div></div>
+        ))}
+      </div>
+      {qualified.length === 0 && <div style={S.empty}>No qualified players yet -- need 3+ hands to qualify.</div>}
+      {qualified.length > 0 && (
+        <div style={S.tblWrap}>
+          <table style={S.tbl}>
+            <thead><tr>{["Rank","Player","Scoring Hands","Mahjong Rate","Rate Rank","Avg Score","Avg Rank","Combined"].map((h, i) => <th key={h} style={i === 0 ? S.thRank : i === 1 ? S.thName : S.th}>{h}</th>)}</tr></thead>
+            <tbody>
+              {qualified.map((p, i) => (
+                <tr key={p.name} style={i % 2 === 0 ? S.trE : S.trO}>
+                  <td style={S.tdR}>{medal(p.overallRank) || p.overallRank}</td>
+                  <td style={S.tdN}>{p.name}</td>
+                  <td style={S.td}>{p.scoringHands}</td>
+                  <td style={S.td}>{pct(p.mahjongRate)}</td>
+                  <td style={S.td}>{p.mahjongRateRank}</td>
+                  <td style={S.td}>{p.avgScore.toFixed(0)}</td>
+                  <td style={S.td}>{p.avgScoreRank}</td>
+                  <td style={{ ...S.td, fontWeight: 700 }}>{p.combinedScore}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {unqualified.length > 0 && (
+        <div style={S.uqSec}>
+          <div style={S.uqTitle}>Not Yet Qualified (need 3 hands)</div>
+          <div style={S.uqGrid}>
+            {unqualified.sort((a, b) => b.scoringHands - a.scoringHands).map(p => (
+              <div key={p.name} style={S.uqChip}>
+                <span style={S.uqName}>{p.name}</span>
+                <span style={S.uqHands}>{p.totalHands}/3 hands</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HandHistory({ hands, onEdit, onDelete, isAdmin, onNeedPin }) {
+  const sorted = [...hands].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  const fmt = ts => { const d = new Date(ts); return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + " " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }); };
+  const act = fn => isAdmin ? fn() : onNeedPin(fn);
+  return (
+    <div>
+      {sorted.length === 0 && <div style={S.empty}>No hands recorded yet.</div>}
+      <div style={S.hList}>
+        {sorted.map(h => (
+          <div key={h.id} style={S.hCard}>
+            <div style={S.hHdr}>
+              <div>
+                <span style={S.hWinner}>{h.winner === "Dead hand" ? "Dead hand" : h.winner + " went out"}</span>
+                <span style={S.hTime}>{fmt(h.timestamp)}</span>
+              </div>
+              <div style={S.hActs}>
+                <button style={S.btnSm} onClick={() => act(() => onEdit(h))}>Edit</button>
+                <button style={{ ...S.btnSm, ...S.btnDng }} onClick={() => act(() => onDelete(h.id))}>Delete</button>
+              </div>
+            </div>
+            <div style={S.hPlayers}>
+              {h.players.map((p, i) => (
+                <div key={i} style={{ ...S.hPlayer, background: h.winner === p.name ? "#fef3c7" : "#faf6ef", borderColor: h.winner === p.name ? "#f59e0b" : "#e8dfc8" }}>
+                  <span style={S.hPName}>{p.name}</span>
+                  <span style={S.hPScore}>{p.score === "X" ? "--" : p.score}</span>
+                </div>
+              ))}
+            </div>
+            {h.notes && <div style={S.hNotes}>Note: {h.notes}</div>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Resources() {
+  const [open, setOpen] = useState("leaderboard");
+  const toggle = k => setOpen(open === k ? null : k);
+  const Sec = ({ id, title, children }) => (
+    <div style={S.resSec}>
+      <button style={S.resBtn} onClick={() => toggle(id)}>
+        <span>{title}</span><span style={{fontSize:12}}>{open === id ? "collapse" : "expand"}</span>
+      </button>
+      {open === id && <div style={S.resBody}>{children}</div>}
+    </div>
+  );
+
+  const baseScores = [2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52,54,56,58,60];
+  const calcDouble = (base, doubles) => base * Math.pow(2, doubles);
+
+  return (
+    <div>
+      <p style={S.resIntro}>House rules and reference material. Tap a section to expand or collapse.</p>
+
+      <Sec id="leaderboard" title="Leaderboard scoring (how the Cup is decided)">
+        <p style={S.rp}>
+          The leaderboard ranks players by a <strong>combined score</strong> -- the sum of two ranks.
+          Lower is better (like golf).
+        </p>
+        <div style={S.scoreBox}>
+          <div style={S.sbRow}>
+            <div>
+              <strong>Avg Score Rank</strong>
+              <div style={S.sbSub}>Ranked by average points per scoring hand, highest first. Dead hands excluded from average.</div>
+            </div>
+          </div>
+          <div style={S.sbPlus}>+</div>
+          <div style={S.sbRow}>
+            <div>
+              <strong>Mahjong Rate Rank</strong>
+              <div style={S.sbSub}>Ranked by % of scoring hands where you went out, highest first. Dead hands excluded from rate.</div>
+            </div>
+          </div>
+          <div style={S.sbPlus}>=</div>
+          <div style={S.sbRow}>
+            <div>
+              <strong>Combined Score</strong>
+              <div style={S.sbSub}>Lower is better. Ties remain tied.</div>
+            </div>
+          </div>
+        </div>
+        <p style={S.rp}><strong>Why rate instead of count?</strong> Mahjong rate rewards going out consistently regardless of how many games you play. Going out 5 out of 10 hands (50%) ranks higher than 5 out of 20 (25%).</p>
+        <p style={S.rp}><strong>Qualification:</strong> Play 3 or more total hands (including dead hands) to appear on the leaderboard. Dead hands count toward this minimum but do not factor into averages or mahjong rate.</p>
+      </Sec>
+
+      <Sec id="counting" title="How to count your score">
+        <p style={S.rp}>Scoring has two steps: count base points from your melds, then apply doubles. From the <a href="https://drive.google.com/file/d/1Dji2mNs70TpuysH7SJleiYbvhnUyRITe/view?usp=sharing" target="_blank" style={S.link}>Oakley family rules</a>.</p>
+        <p style={S.rp}><strong>Step 1 -- Count base points from exposed and concealed melds:</strong></p>
+        <div style={S.countGrid}>
+          <div style={S.cgHdr}><span>Meld type</span><span style={{textAlign:"center"}}>Exposed</span><span style={{textAlign:"center"}}>Concealed</span></div>
+          {[
+            ["3 of a kind, 2-8", "2", "4"],
+            ["3 of a kind, 1 or 9", "4", "8"],
+            ["3 of a kind, Winds", "4", "8"],
+            ["3 of a kind, Dragons", "4", "8"],
+            ["4 of a kind, 2-8", "8", "16"],
+            ["4 of a kind, 1 or 9", "16", "32"],
+            ["4 of a kind, Winds", "16", "32"],
+            ["4 of a kind, Dragons", "16", "32"],
+          ].map(([label, exp, con]) => (
+            <div key={label} style={S.cgRow}>
+              <span>{label}</span><span style={{textAlign:"center"}}>{exp}</span><span style={{textAlign:"center"}}>{con}</span>
+            </div>
+          ))}
+        </div>
+        <p style={S.rp} style={{marginTop:12}}><strong>Bonus points (added to base before doubling):</strong></p>
+        <div style={S.dGrid}>
+          <div style={S.dHdr}><span>Condition</span><span>Points</span></div>
+          {[
+            ["All Seasons and Flowers", "4"],
+            ["2 Dragons same color", "2"],
+            ["Own wind (pair)", "2"],
+          ].map(([label, val]) => (
+            <div key={label} style={S.dRow}><span>{label}</span><strong>{val}</strong></div>
+          ))}
+        </div>
+        <p style={S.rp} style={{marginTop:12}}><strong>Count for winning hand (added before doubling):</strong></p>
+        <div style={S.dGrid}>
+          <div style={S.dHdr}><span>Condition</span><span>Points</span></div>
+          {[
+            ["For winning", "20"],
+            ["No score in hand (all straights/runs)", "10"],
+            ["Winning on a free tile", "10"],
+            ["No straights (runs)", "10"],
+            ["Filling only chance", "2"],
+            ["Drawing tile from wall", "2"],
+          ].map(([label, val]) => (
+            <div key={label} style={S.dRow}><span>{label}</span><strong>{val}</strong></div>
+          ))}
+        </div>
+        <p style={S.rp} style={{marginTop:12}}><strong>Special hands (flat scores, no counting needed):</strong></p>
+        <div style={S.dGrid}>
+          <div style={S.dHdr}><span>Hand</span><span>Points</span></div>
+          {[
+            ["All winds and dragons", "300"],
+            ["All in original hand", "300"],
+            ["All winds and any pair", "300"],
+          ].map(([label, val]) => (
+            <div key={label} style={S.dRow}><span>{label}</span><strong>{val}</strong></div>
+          ))}
+        </div>
+        <div style={{...S.dGrid, marginTop:10}}>
+          <div style={S.dRow}>
+            <span><strong>Seven Sisters</strong> -- going out with 7 pairs. A gutsy maneuver. Scored as a normal winning hand with applicable doubles.</span>
+          </div>
+        </div>
+      </Sec>
+
+      <Sec id="doubles" title="Doubles -- when to apply them">
+        <p style={S.rp}>
+          Doubles apply to the <strong>winning player only</strong>. Each double multiplies the total score by 2.
+          Multiple doubles stack (2 doubles = x4, 3 doubles = x8, etc.). Use the doubles lookup table to find the final score.
+        </p>
+        <p style={S.rp}><strong>Winners never pay anyone.</strong> East wind wins and pays double.</p>
+        <div style={S.dGrid}>
+          <div style={S.dHdr}><span>Condition</span><span>Doubles</span></div>
+          {[
+            ["3 or 4 of any dragon (same color)", "+1"],
+            ["3 or 4 of own wind", "+1"],
+            ["All of 1 suit plus Winds or Dragons", "+1"],
+            ["All of 1 suit, no Winds or Dragons", "+3"],
+            ["Own season", "+1"],
+            ["Both own seasons", "+3"],
+            ["Four seasons of same color", "+3"],
+            ["Winning on original hand", "+3"],
+          ].map(([label, val]) => (
+            <div key={label} style={S.dRow}><span>{label}</span><strong>{val}</strong></div>
+          ))}
+        </div>
+        <p style={S.resNote}>Doubles stack. A hand with 2 applicable doubles multiplies score x4.</p>
+      </Sec>
+
+      <Sec id="doubletable" title="Doubles lookup table">
+        <p style={S.rp}>Find your base score in the left column, then read across for 1-6 doubles.</p>
+        <div style={{overflowX:"auto"}}>
+          <table style={{...S.tbl, fontSize:12}}>
+            <thead>
+              <tr>
+                <th style={{...S.th, background:"#4a3728", position:"sticky", left:0, zIndex:3}}>Base</th>
+                {[1,2,3,4,5,6].map(d => <th key={d} style={{...S.th, background:"#4a3728"}}>{"x" + Math.pow(2,d) + " (" + d + ")"}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {baseScores.map((base, i) => (
+                <tr key={base} style={i % 2 === 0 ? S.trE : S.trO}>
+                  <td style={{...S.td, fontWeight:700, background: i%2===0?"#f0ebe0":"#e8e0d0", position:"sticky", left:0}}>{base}</td>
+                  {[1,2,3,4,5,6].map(d => <td key={d} style={S.td}>{calcDouble(base, d)}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Sec>
+    </div>
+  );
+}
+
+function App() {
+  const [hands, setHands] = useState([]);
+  const [archived, setArchived] = useState([]);
+  const [tab, setTab] = useState("leaderboard");
+  const [season, setSeason] = useState(CURRENT_SEASON);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showPin, setShowPin] = useState(false);
+  const [pinCb, setPinCb] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [showNS, setShowNS] = useState(false);
+  const [nsName, setNsName] = useState("");
+  const [toast, setToast] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const [h, s] = await Promise.all([loadHands(), loadSeasons()]);
+      let seasons = s;
+      if (!seasons.find(x => x.name === "2024-2025")) {
+        seasons = [{ name: "2024-2025", hands: H }, ...seasons];
+        await saveSeasons(seasons);
+      }
+      setHands(h); setArchived(seasons); setLoading(false);
+    })();
+  }, []);
+
+  const showToast = (msg, type) => { setToast({ msg, type: type || "ok" }); setTimeout(() => setToast(null), 3000); };
+  const requireAdmin = fn => { if (isAdmin) { fn(); return; } setPinCb(() => fn); setShowPin(true); };
+
+  const isCurrent = season === CURRENT_SEASON;
+  const currentHands = isCurrent ? hands : (archived.find(s => s.name === season) || {}).hands || [];
+  const allSeasons = [CURRENT_SEASON, ...archived.map(s => s.name)];
+
+  const doSubmit = async hand => { const u = [...hands, hand]; setHands(u); await saveHands(u); setTab("leaderboard"); showToast("Hand recorded!"); };
+  const doEdit = async hand => { const u = hands.map(h => h.id === hand.id ? hand : h); setHands(u); await saveHands(u); setEditing(null); showToast("Hand updated!"); };
+  const doDelete = async id => {
+    if (!confirm("Delete this hand? This cannot be undone.")) return;
+    const u = hands.filter(h => h.id !== id); setHands(u); await saveHands(u); showToast("Hand deleted.", "info");
+  };
+  const doNewSeason = async () => {
+    if (!nsName.trim()) return;
+    const a = [...archived, { name: CURRENT_SEASON, hands }];
+    setArchived(a); await saveSeasons(a);
+    setHands([]); await saveHands([]);
+    setShowNS(false); setNsName(""); setSeason(CURRENT_SEASON);
+    showToast("Season archived!");
+  };
+
+  const tabs = [["leaderboard","Leaderboard"], ...(isCurrent ? [["submit","Submit Scores"]] : []), ["history","Hand History"], ["resources","Resources"]];
+
+  if (loading) return <div style={S.loading}>Loading...</div>;
+
+  return (
+    <div style={S.app}>
+      {toast && <div style={{ ...S.toast, background: toast.type === "info" ? "#4a5568" : "#276749" }}>{toast.msg}</div>}
+
+      {showPin && (
+        <PinModal
+          onSuccess={() => { setIsAdmin(true); setShowPin(false); if (pinCb) { pinCb(); setPinCb(null); } }}
+          onCancel={() => { setShowPin(false); setPinCb(null); }}
+        />
+      )}
+
+      {showNS && (
+        <div style={S.overlay}>
+          <div style={S.modal}>
+            <h3 style={S.modalTitle}>Start New Season</h3>
+            <p style={S.modalSub}>"{CURRENT_SEASON}" will be archived. Enter the new season name:</p>
+            <input style={S.pinInput} value={nsName} onChange={e => setNsName(e.target.value)}
+              placeholder="e.g. 2027" autoFocus onKeyDown={e => e.key === "Enter" && doNewSeason()} />
+            <div style={S.modalBtns}>
+              <button style={S.btnSec} onClick={() => setShowNS(false)}>Cancel</button>
+              <button style={S.btnPri} onClick={doNewSeason}>Archive and Start</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editing && (
+        <div style={S.overlay}>
+          <div style={{ ...S.modal, maxWidth: 560, width: "95%", padding: 0, background: "transparent", boxShadow: "none" }}>
+            <ScoreForm editHand={editing} onSubmit={doEdit} onCancel={() => setEditing(null)} />
+          </div>
+        </div>
+      )}
+
+      <div style={S.header}>
+        <div style={S.hdrInner}>
+          <div>
+            <div style={S.hdrTitle}>Oakley Family Mahjong Cup</div>
+            <div style={{ marginTop: 4 }}>
+              <select style={S.seasonSel} value={season} onChange={e => { setSeason(e.target.value); setTab("leaderboard"); }}>
+                {allSeasons.map(s => <option key={s} value={s}>{s === CURRENT_SEASON ? s + " (current)" : s}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            {isAdmin ? (
+              <div style={S.adminRow}>
+                <button style={S.btnAdm} onClick={() => exportCSV(currentHands, season)}>CSV</button>
+                {isCurrent && <button style={S.btnAdm} onClick={() => setShowNS(true)}>New Season</button>}
+                <span style={S.admBadge}>Admin</span>
+              </div>
+            ) : (
+              <button style={S.btnAdmSm} onClick={() => requireAdmin(() => {})}>Admin</button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div style={S.tabs}>
+        {tabs.map(([id, label]) => (
+          <button key={id} style={tab === id ? S.tabOn : S.tabOff} onClick={() => setTab(id)}>{label}</button>
+        ))}
+      </div>
+
+      <div style={S.content}>
+        {tab === "leaderboard" && <Leaderboard hands={currentHands} />}
+        {tab === "submit" && isCurrent && <ScoreForm onSubmit={doSubmit} />}
+        {tab === "history" && <HandHistory hands={currentHands} isAdmin={isAdmin} onEdit={h => setEditing(h)} onDelete={doDelete} onNeedPin={fn => requireAdmin(fn)} />}
+        {tab === "resources" && <Resources />}
+      </div>
+
+      <div style={S.footer}>Ranking: AVG Score rank + Mahjong Rate rank . Qualify with 3+ hands (including dead hands)</div>
+    </div>
+  );
+}
+
+const S = {
+  app: { minHeight: "100vh", background: "#f7f3ec", fontFamily: "Georgia, serif", color: "#2d2417" },
+  loading: { display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontSize: 18 },
+  header: { background: "#2d2417", color: "#f7f3ec", padding: "14px 20px" },
+  hdrInner: { maxWidth: 900, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 },
+  hdrTitle: { fontSize: 20, fontWeight: 700 },
+  seasonSel: { background: "transparent", color: "#d1c4a8", border: "1px solid #5a4a32", borderRadius: 4, padding: "2px 6px", fontSize: 13, cursor: "pointer" },
+  adminRow: { display: "flex", gap: 6, alignItems: "center" },
+  btnAdm: { background: "transparent", border: "1px solid #d1c4a8", color: "#d1c4a8", borderRadius: 4, padding: "4px 10px", fontSize: 12, cursor: "pointer" },
+  btnAdmSm: { background: "transparent", border: "1px solid #5a4a32", color: "#9a8060", borderRadius: 4, padding: "3px 9px", fontSize: 11, cursor: "pointer" },
+  admBadge: { background: "#7a6340", color: "#f7f3ec", borderRadius: 4, padding: "3px 8px", fontSize: 11, fontWeight: 700 },
+  tabs: { background: "#3d3020", display: "flex", flexWrap: "wrap" },
+  tabOn: { padding: "11px 16px", background: "transparent", border: "none", borderBottom: "3px solid #c9a84c", color: "#f7f3ec", fontSize: 13, cursor: "pointer", fontWeight: 700 },
+  tabOff: { padding: "11px 16px", background: "transparent", border: "none", borderBottom: "3px solid transparent", color: "#b8a882", fontSize: 13, cursor: "pointer" },
+  content: { maxWidth: 900, margin: "0 auto", padding: "24px 16px" },
+  sumBar: { display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 24 },
+  sumItem: { background: "#fff", border: "1px solid #e0d5c0", borderRadius: 8, padding: "12px 20px", flex: "1 1 100px", textAlign: "center" },
+  sumVal: { fontSize: 22, fontWeight: 700 },
+  sumLbl: { fontSize: 11, color: "#7a6340", marginTop: 2, textTransform: "uppercase", letterSpacing: 0.5 },
+  tblWrap: { overflowX: "auto", overflowY: "auto", maxHeight: 420, borderRadius: 8, border: "1px solid #e0d5c0" },
+  tbl: { width: "100%", borderCollapse: "collapse", background: "#fff" },
+  th: { padding: "10px 14px", background: "#2d2417", color: "#d1c4a8", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, textAlign: "center", whiteSpace: "nowrap", position: "sticky", top: 0, zIndex: 2 },
+  thRank: { padding: "10px 14px", background: "#2d2417", color: "#d1c4a8", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, textAlign: "center", whiteSpace: "nowrap", position: "sticky", top: 0, left: 0, zIndex: 3 },
+  thName: { padding: "10px 14px", background: "#2d2417", color: "#d1c4a8", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, textAlign: "left", whiteSpace: "nowrap", position: "sticky", top: 0, left: 48, zIndex: 3 },
+  trE: { background: "#fff" }, trO: { background: "#faf6ef" },
+  td: { padding: "10px 14px", textAlign: "center", fontSize: 14, borderBottom: "1px solid #f0e8d8" },
+  tdR: { padding: "10px 14px", textAlign: "center", fontSize: 18, borderBottom: "1px solid #f0e8d8", position: "sticky", left: 0, zIndex: 1, background: "inherit" },
+  tdN: { padding: "10px 14px", textAlign: "left", fontSize: 15, fontWeight: 600, borderBottom: "1px solid #f0e8d8", position: "sticky", left: 48, zIndex: 1, background: "inherit", boxShadow: "2px 0 4px rgba(0,0,0,0.06)" },
+  uqSec: { marginTop: 24 },
+  uqTitle: { fontSize: 12, color: "#7a6340", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 },
+  uqGrid: { display: "flex", flexWrap: "wrap", gap: 8 },
+  uqChip: { background: "#fff", border: "1px solid #e0d5c0", borderRadius: 20, padding: "6px 14px", display: "flex", gap: 8, alignItems: "center" },
+  uqName: { fontSize: 14, fontWeight: 600 },
+  uqHands: { fontSize: 12, color: "#7a6340" },
+  empty: { textAlign: "center", color: "#7a6340", padding: "40px 20px", fontSize: 15 },
+  formCard: { background: "#fff", border: "1px solid #e0d5c0", borderRadius: 10, padding: 24, maxWidth: 580 },
+  formTitle: { fontSize: 20, fontWeight: 700, marginBottom: 16 },
+  instrBox: { background: "#faf6ef", border: "1px solid #e0d5c0", borderRadius: 8, padding: "14px 16px", marginBottom: 20, fontSize: 13 },
+  instrSection: { marginBottom: 14 },
+  instrHead: { fontWeight: 700, fontSize: 12, color: "#4a3728", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 },
+  instrDivider: { borderTop: "1px solid #e0d5c0", margin: "12px 0" },
+  li: { marginBottom: 6 },
+  liRow: { display: "flex", gap: 8, marginBottom: 8, fontSize: 13, lineHeight: 1.6, color: "#3a2e22", alignItems: "flex-start" },
+  liBullet: { flexShrink: 0, fontWeight: 700, color: "#7a6340", marginTop: 1 },
+  liNum: { flexShrink: 0, fontWeight: 700, color: "#7a6340", minWidth: 18, marginTop: 1 },
+  instrList: { margin: "4px 0 0 0", paddingLeft: 20, lineHeight: 1.7, color: "#3a2e22", fontSize: 13, listStylePosition: "outside" },
+  deadBanner: { background: "#fff8e1", border: "1px solid #f6d860", borderRadius: 6, padding: "10px 14px", fontSize: 13, color: "#7a5c00", marginBottom: 14 },
+  fg: { marginBottom: 16 },
+  lbl: { display: "block", fontSize: 13, fontWeight: 600, color: "#4a3728", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.4 },
+  req: { color: "#c53030" },
+  opt: { fontWeight: 400, color: "#9a8060", textTransform: "none", fontSize: 12 },
+  sel: { width: "100%", padding: "9px 10px", border: "1px solid #d1c4a8", borderRadius: 6, fontSize: 14, background: "#fdfbf7", color: "#2d2417", boxSizing: "border-box" },
+  pgrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 },
+  pcell: { background: "#faf6ef", border: "1px solid #e0d5c0", borderRadius: 8, padding: 12 },
+  plbl: { fontSize: 11, fontWeight: 700, color: "#7a6340", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 },
+  numInput: { width: "100%", marginTop: 8, padding: "8px 10px", border: "1px solid #d1c4a8", borderRadius: 6, fontSize: 14, background: "#fff", boxSizing: "border-box" },
+  hint: { fontSize: 12, color: "#9a8060", marginBottom: 6, fontStyle: "italic" },
+  ta: { width: "100%", padding: "9px 10px", border: "1px solid #d1c4a8", borderRadius: 6, fontSize: 14, background: "#fdfbf7", resize: "vertical", boxSizing: "border-box", fontFamily: "Georgia, serif" },
+  fbtns: { display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 },
+  err: { display: "block", fontSize: 12, color: "#e53e3e", marginTop: 4 },
+  hList: { display: "flex", flexDirection: "column", gap: 10 },
+  hCard: { background: "#fff", border: "1px solid #e0d5c0", borderRadius: 8, padding: 14 },
+  hHdr: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, flexWrap: "wrap", gap: 8 },
+  hWinner: { fontWeight: 700, fontSize: 15, display: "block" },
+  hTime: { fontSize: 12, color: "#9a8060", marginTop: 2, display: "block" },
+  hActs: { display: "flex", gap: 6 },
+  hPlayers: { display: "flex", gap: 8, flexWrap: "wrap" },
+  hPlayer: { border: "1px solid #e8dfc8", borderRadius: 6, padding: "4px 10px", display: "flex", gap: 8 },
+  hPName: { fontSize: 13, fontWeight: 600 },
+  hPScore: { fontSize: 13, color: "#7a6340" },
+  hNotes: { marginTop: 8, fontSize: 13, color: "#7a6340", fontStyle: "italic" },
+  btnPri: { background: "#2d2417", color: "#f7f3ec", border: "none", borderRadius: 6, padding: "9px 20px", fontSize: 14, cursor: "pointer" },
+  btnSec: { background: "transparent", color: "#4a3728", border: "1px solid #c4b49a", borderRadius: 6, padding: "9px 20px", fontSize: 14, cursor: "pointer" },
+  btnSm: { background: "transparent", border: "1px solid #c4b49a", borderRadius: 4, padding: "4px 10px", fontSize: 12, cursor: "pointer", color: "#4a3728" },
+  btnDng: { borderColor: "#f9b8b8", color: "#c53030" },
+  overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },
+  modal: { background: "#fff", borderRadius: 10, padding: 28, maxWidth: 380, width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" },
+  modalTitle: { fontSize: 18, fontWeight: 700, marginBottom: 6 },
+  modalSub: { fontSize: 14, color: "#7a6340", marginBottom: 16 },
+  modalBtns: { display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 16 },
+  pinInput: { width: "100%", padding: "10px 12px", border: "2px solid #d1c4a8", borderRadius: 6, fontSize: 20, textAlign: "center", letterSpacing: 8, boxSizing: "border-box" },
+  pinErr: { color: "#e53e3e", fontSize: 13, marginTop: 6, textAlign: "center" },
+  toast: { position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", color: "#fff", padding: "10px 24px", borderRadius: 20, fontSize: 14, zIndex: 200, boxShadow: "0 4px 12px rgba(0,0,0,0.2)" },
+  footer: { textAlign: "center", padding: "20px 16px", fontSize: 11, color: "#9a8060", borderTop: "1px solid #e0d5c0", marginTop: 40 },
+  resSec: { border: "1px solid #e0d5c0", borderRadius: 8, marginBottom: 10, overflow: "hidden" },
+  resBtn: { width: "100%", background: "#faf6ef", border: "none", padding: "13px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 15, fontWeight: 700, cursor: "pointer", textAlign: "left" },
+  resBody: { padding: 16, background: "#fff", borderTop: "1px solid #e0d5c0" },
+  resIntro: { fontSize: 13, color: "#7a6340", marginBottom: 16, fontStyle: "italic" },
+  link: { color: "#7a6340", textDecoration: "underline" },
+  resNote: { fontSize: 12, color: "#9a8060", fontStyle: "italic", marginTop: 10 },
+  rp: { fontSize: 13, lineHeight: 1.7, color: "#3a2e22", marginBottom: 10 },
+  scoreBox: { background: "#faf6ef", border: "1px solid #e0d5c0", borderRadius: 8, padding: "12px 16px", marginBottom: 12 },
+  sbRow: { display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13 },
+  sbPlus: { textAlign: "center", fontSize: 20, color: "#c9a84c", padding: "2px 0" },
+  dGrid: { border: "1px solid #e0d5c0", borderRadius: 6, overflow: "hidden", fontSize: 13 },
+  dHdr: { display: "flex", justifyContent: "space-between", background: "#2d2417", color: "#d1c4a8", padding: "8px 12px", fontWeight: 700, fontSize: 11, textTransform: "uppercase" },
+  dRow: { display: "flex", justifyContent: "space-between", padding: "8px 12px", borderBottom: "1px solid #f0e8d8" },
+  hItem: { background: "#faf6ef", border: "1px solid #e0d5c0", borderRadius: 6, padding: "10px 14px", marginBottom: 8 },
+  hIName: { fontWeight: 700, fontSize: 14, marginBottom: 4 },
+  hIDesc: { fontSize: 13, color: "#5a4a38", lineHeight: 1.5 },
+  cgHdr: { display: "flex", justifyContent: "space-between", background: "#2d2417", color: "#d1c4a8", padding: "8px 12px", fontWeight: 700, fontSize: 11, textTransform: "uppercase", borderRadius: "6px 6px 0 0" },
+  cgRow: { display: "flex", justifyContent: "space-between", padding: "7px 12px", borderBottom: "1px solid #f0e8d8", fontSize: 13 },
+  countGrid: { border: "1px solid #e0d5c0", borderRadius: 6, overflow: "hidden", marginBottom: 12 },
+  sbSub: { fontSize: 11, color: "#7a6340", marginTop: 2, fontWeight: 400 },
+  countGrid: { border: "1px solid #e0d5c0", borderRadius: 6, overflow: "hidden", fontSize: 13, marginBottom: 8 },
+  cgHdr: { display: "grid", gridTemplateColumns: "1fr 80px 80px", background: "#2d2417", color: "#d1c4a8", padding: "8px 12px", fontWeight: 700, fontSize: 11, textTransform: "uppercase", gap: 8 },
+  cgRow: { display: "grid", gridTemplateColumns: "1fr 80px 80px", padding: "7px 12px", borderBottom: "1px solid #f0e8d8", gap: 8 },
+  sbSub: { fontSize: 11, color: "#9a8060", marginTop: 2, fontWeight: 400 },
+};
+
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(React.createElement(App));
+  </script>
+</body>
+</html>
