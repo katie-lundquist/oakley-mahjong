@@ -4,24 +4,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Oakley Family Mahjong Cup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;600;700&display=swap" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Georgia, serif; background: #f4f6fb; color: #002676; }
-    select, input, textarea, button { font-family: Georgia, serif; }
+    body { font-family: "Roboto", sans-serif; background: #f4f6fb; color: #002676; }
+    select, input, textarea, button { font-family: "Roboto", sans-serif; }
   </style>
 </head>
 <body>
   <div id="root"></div>
   <script type="text/babel">
     const { useState, useEffect, useMemo } = React;
-    const storage = {
-      get: (key) => { try { const v = localStorage.getItem(key); return v ? { value: v } : null; } catch(e) { return null; } },
-      set: (key, value) => { try { localStorage.setItem(key, value); return true; } catch(e) { return null; } },
-    };
-    window.storage = storage;
 
 
 const PLAYERS = ["Alex","Brooke","Bryan","Caitlyn","David","Dick","Drew","Elana","Emily","Jack","James","Jon","Judi","Kaity","Katie","Margot","Marissa","Rick","Robbie","Robin","Sue","Tommy","Guest 1","Guest 2","Guest 3","Guest 4"];
@@ -244,10 +240,98 @@ const H2021 = [
   {id:"y21h60",timestamp:"2021-12-25T12:00:00",winner:"Brooke",players:[{name:"Tommy",score:"44"},{name:"Katie",score:"108"},{name:"Brooke",score:"56"},{name:"Rick",score:"6"}],notes:""},
 ];
 
-async function loadHands() { try { const r = await window.storage.get(STORAGE_KEY); return r ? JSON.parse(r.value) : []; } catch(e) { return []; } }
-async function saveHands(h) { try { await window.storage.set(STORAGE_KEY, JSON.stringify(h)); } catch(e) {} }
-async function loadSeasons() { try { const r = await window.storage.get(SEASONS_KEY); return r ? JSON.parse(r.value) : []; } catch(e) { return []; } }
-async function saveSeasons(s) { try { await window.storage.set(SEASONS_KEY, JSON.stringify(s)); } catch(e) {} }
+const WORKER_URL = "https://oakley-mahjong-worker.catherine-e-woodward.workers.dev";
+
+// Convert a sheet row to a hand object
+function rowToHand(row, rowIndex) {
+  return {
+    id: String(rowIndex),
+    rowIndex: rowIndex,
+    timestamp: row[0] || "",
+    season: row[1] || "",
+    winner: row[2] || "",
+    players: [
+      { name: row[3] || "", score: row[4] || "" },
+      { name: row[5] || "", score: row[6] || "" },
+      { name: row[7] || "", score: row[8] || "" },
+      { name: row[9] || "", score: row[10] || "" },
+    ],
+    notes: row[11] || "",
+  };
+}
+
+// Convert a hand object to a sheet row
+function handToRow(hand, season) {
+  return [
+    hand.timestamp,
+    season,
+    hand.winner,
+    hand.players[0]?.name || "",
+    hand.players[0]?.score || "",
+    hand.players[1]?.name || "",
+    hand.players[1]?.score || "",
+    hand.players[2]?.name || "",
+    hand.players[2]?.score || "",
+    hand.players[3]?.name || "",
+    hand.players[3]?.score || "",
+    hand.notes || "",
+  ];
+}
+
+async function fetchAllHands() {
+  const resp = await fetch(WORKER_URL);
+  const data = await resp.json();
+  const rows = data.values || [];
+  // Skip header row (index 0), convert remaining rows
+  const hands = [];
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i] && rows[i][0]) {
+      hands.push(rowToHand(rows[i], i));
+    }
+  }
+  return hands;
+}
+
+async function appendHand(hand, season) {
+  const row = handToRow(hand, season);
+  const resp = await fetch(WORKER_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "append", row }),
+  });
+  return resp.json();
+}
+
+async function updateHand(hand, season) {
+  const row = handToRow(hand, season);
+  const range = "Sheet1!A" + (hand.rowIndex + 1);
+  const resp = await fetch(WORKER_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "update", range, row }),
+  });
+  return resp.json();
+}
+
+async function deleteHand(rowIndex) {
+  const resp = await fetch(WORKER_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "delete", rowIndex }),
+  });
+  return resp.json();
+}
+
+async function migrateLegacyData(allRows) {
+  // Batch append all historical rows
+  for (let i = 0; i < allRows.length; i++) {
+    await fetch(WORKER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "append", row: allRows[i] }),
+    });
+  }
+}
 
 function computeLeaderboard(hands) {
   const stats = {};
@@ -493,7 +577,7 @@ function Leaderboard({ hands, season }) {
       {notice && <div style={S.seasonNotice}>{notice}</div>}
       <div style={S.rankingSummary}>Ranking: AVG Score rank + Mahjong Rate rank. Qualify with 3+ hands (including dead hands).</div>
       <div style={S.sumBar}>
-        {[["Qualified", qualified.length], ["Total Hands", summary.totalHands], ["Game Days", summary.gameDays], ["High Score", summary.highScore || "n/a"], ["Total Points", summary.totalPoints.toLocaleString()]].map(([l, v]) => (
+        {[["Qualified", qualified.length], ["Total Hands", summary.totalHands], ["Game Days", summary.gameDays], ["High Score", summary.highScore || "N/A"], ["Total Points", summary.totalPoints.toLocaleString()]].map(([l, v]) => (
           <div key={l} style={S.sumItem}><div style={S.sumVal}>{v}</div><div style={S.sumLbl}>{l}</div></div>
         ))}
       </div>
@@ -553,14 +637,14 @@ function HandHistory({ hands, onEdit, onDelete, isAdmin, onNeedPin }) {
               </div>
               <div style={S.hActs}>
                 <button style={S.btnSm} onClick={() => act(() => onEdit(h))}>Edit</button>
-                <button style={{ ...S.btnSm, ...S.btnDng }} onClick={() => act(() => onDelete(h.id))}>Delete</button>
+                <button style={{ ...S.btnSm, ...S.btnDng }} onClick={() => act(() => onDelete(h))}>Delete</button>
               </div>
             </div>
             <div style={S.hPlayers}>
               {h.players.map((p, i) => (
                 <div key={i} style={{ ...S.hPlayer, background: h.winner === p.name ? "#dbeafe" : "#f0f4fb", borderColor: h.winner === p.name ? "#3b82f6" : "#c8d4e8" }}>
                   <span style={S.hPName}>{p.name}</span>
-                  <span style={S.hPScore}>{p.score === "X" ? "n/a" : p.score}</span>
+                  <span style={S.hPScore}>{p.score === "X" ? "N/A" : p.score}</span>
                 </div>
               ))}
             </div>
@@ -734,8 +818,7 @@ function Resources() {
 }
 
 function App() {
-  const [hands, setHands] = useState([]);
-  const [archived, setArchived] = useState([]);
+  const [allHands, setAllHands] = useState([]);
   const [tab, setTab] = useState("leaderboard");
   const [season, setSeason] = useState(CURRENT_SEASON);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -746,56 +829,112 @@ function App() {
   const [nsName, setNsName] = useState("");
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [lastSynced, setLastSynced] = useState(null);
+  const [showMigrate, setShowMigrate] = useState(false);
+  const [migrating, setMigrating] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      const [h, s] = await Promise.all([loadHands(), loadSeasons()]);
-      let seasons = s;
-      if (!seasons.find(x => x.name === "2024")) {
-        seasons = [{ name: "2024", hands: H }, ...seasons];
-        // migrate old name if present
-        seasons = seasons.filter(x => x.name !== "2024-2025");
-        await saveSeasons(seasons);
-      }
-      if (!seasons.find(x => x.name === "2023")) {
-        seasons = [{ name: "2023", hands: H2023 }, ...seasons];
-        await saveSeasons(seasons);
-      }
-      if (!seasons.find(x => x.name === "2021")) {
-        seasons = [{ name: "2021", hands: H2021 }, ...seasons];
-        await saveSeasons(seasons);
-      }
-      if (!seasons.find(x => x.name === "2019-2020")) {
-        seasons = [{ name: "2019-2020", hands: H1920 }, ...seasons];
-        // migrate old name if present
-        seasons = seasons.filter(x => x.name !== "Dec 2019 - Feb 2020");
-        await saveSeasons(seasons);
-      }
-      setHands(h); setArchived(seasons); setLoading(false);
-    })();
-  }, []);
+  const ALL_LEGACY_ROWS = [...H1920.map(h => handToRow(h, "2019-2020")), ...H2021.map(h => handToRow(h, "2021")), ...H2023.map(h => handToRow(h, "2023")), ...H.map(h => handToRow(h, "2024"))];
+
+  const loadData = async () => {
+    try {
+      setSyncing(true);
+      const hands = await fetchAllHands();
+      setAllHands(hands);
+      setLastSynced(new Date());
+      // Check if sheet is empty (needs migration)
+      if (hands.length === 0) setShowMigrate(true);
+    } catch(e) {
+      showToast("Could not connect to database.", "err");
+    } finally {
+      setSyncing(false);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadData(); }, []);
 
   const showToast = (msg, type) => { setToast({ msg, type: type || "ok" }); setTimeout(() => setToast(null), 3000); };
   const requireAdmin = fn => { if (isAdmin) { fn(); return; } setPinCb(() => fn); setShowPin(true); };
 
+  // Filter hands by season
+  const seasonHands = allHands.filter(h => h.season === season);
   const isCurrent = season === CURRENT_SEASON;
-  const currentHands = isCurrent ? hands : (archived.find(s => s.name === season) || {}).hands || [];
-  const seasonOrder = { "2026": 6, "2024": 5, "2023": 4, "2021": 3, "2019-2020": 2 };
-  const allSeasons = [CURRENT_SEASON, ...archived.map(s => s.name)].sort((a, b) => (seasonOrder[b] || 0) - (seasonOrder[a] || 0));
 
-  const doSubmit = async hand => { const u = [...hands, hand]; setHands(u); await saveHands(u); setTab("leaderboard"); showToast("Hand recorded!"); };
-  const doEdit = async hand => { const u = hands.map(h => h.id === hand.id ? hand : h); setHands(u); await saveHands(u); setEditing(null); showToast("Hand updated!"); };
-  const doDelete = async id => {
-    if (!confirm("Delete this hand? This cannot be undone.")) return;
-    const u = hands.filter(h => h.id !== id); setHands(u); await saveHands(u); showToast("Hand deleted.", "info");
+  // Get all seasons from data
+  const seasonsInData = [...new Set(allHands.map(h => h.season).filter(Boolean))];
+  const seasonOrder = { "2026": 6, "2024": 5, "2023": 4, "2021": 3, "2019-2020": 2 };
+  const allSeasons = [...new Set([CURRENT_SEASON, ...seasonsInData])].sort((a, b) => (seasonOrder[b] || 0) - (seasonOrder[a] || 0));
+
+  const doSubmit = async (hand) => {
+    try {
+      setSyncing(true);
+      await appendHand(hand, CURRENT_SEASON);
+      await loadData();
+      setTab("leaderboard");
+      showToast("Hand recorded!");
+    } catch(e) {
+      showToast("Error saving hand.", "err");
+    } finally {
+      setSyncing(false);
+    }
   };
+
+  const doEdit = async (hand) => {
+    try {
+      setSyncing(true);
+      await updateHand(hand, season);
+      await loadData();
+      setEditing(null);
+      showToast("Hand updated!");
+    } catch(e) {
+      showToast("Error updating hand.", "err");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const doDelete = async (hand) => {
+    if (!confirm("Delete this hand? This cannot be undone.")) return;
+    try {
+      setSyncing(true);
+      await deleteHand(hand.rowIndex);
+      await loadData();
+      showToast("Hand deleted.", "info");
+    } catch(e) {
+      showToast("Error deleting hand.", "err");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const doMigrate = async () => {
+    setMigrating(true);
+    try {
+      await migrateLegacyData(ALL_LEGACY_ROWS);
+      await loadData();
+      setShowMigrate(false);
+      showToast("Historical data loaded!");
+    } catch(e) {
+      showToast("Migration error. Try again.", "err");
+    } finally {
+      setMigrating(false);
+    }
+  };
+
   const doNewSeason = async () => {
     if (!nsName.trim()) return;
-    const a = [...archived, { name: CURRENT_SEASON, hands }];
-    setArchived(a); await saveSeasons(a);
-    setHands([]); await saveHands([]);
-    setShowNS(false); setNsName(""); setSeason(CURRENT_SEASON);
-    showToast("Season archived!");
+    setShowNS(false);
+    setNsName("");
+    setSeason(CURRENT_SEASON);
+    showToast("Ready for new season " + nsName + "!");
+  };
+
+  const fmtSynced = () => {
+    if (!lastSynced) return "";
+    const diff = Math.floor((new Date() - lastSynced) / 60000);
+    if (diff < 1) return "Synced just now";
+    return "Synced " + diff + " min ago";
   };
 
   const tabs = [["leaderboard","Leaderboard"], ...(isCurrent ? [["submit","Submit Scores"]] : []), ["history","Hand History"], ["resources","Resources"]];
@@ -804,7 +943,7 @@ function App() {
 
   return (
     <div style={S.app}>
-      {toast && <div style={{ ...S.toast, background: toast.type === "info" ? "#4a5568" : "#276749" }}>{toast.msg}</div>}
+      {toast && <div style={{ ...S.toast, background: toast.type === "err" ? "#c53030" : toast.type === "info" ? "#4a5568" : "#276749" }}>{toast.msg}</div>}
 
       {showPin && (
         <PinModal
@@ -813,16 +952,30 @@ function App() {
         />
       )}
 
+      {showMigrate && isAdmin && (
+        <div style={S.overlay}>
+          <div style={S.modal}>
+            <h3 style={S.modalTitle}>Load Historical Data</h3>
+            <p style={S.modalSub}>The database is empty. Load all historical seasons (2019-2020 through 2024) into Google Sheets now?</p>
+            <p style={{fontSize:12,color:"#5a7aaa",marginBottom:8}}>This will take about 30-60 seconds.</p>
+            <div style={S.modalBtns}>
+              <button style={S.btnSec} onClick={() => setShowMigrate(false)}>Skip</button>
+              <button style={S.btnPri} onClick={doMigrate} disabled={migrating}>{migrating ? "Loading..." : "Load Historical Data"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showNS && (
         <div style={S.overlay}>
           <div style={S.modal}>
             <h3 style={S.modalTitle}>Start New Season</h3>
-            <p style={S.modalSub}>"{CURRENT_SEASON}" will be archived. Enter the new season name:</p>
+            <p style={S.modalSub}>Enter the new season name:</p>
             <input style={S.pinInput} value={nsName} onChange={e => setNsName(e.target.value)}
               placeholder="e.g. 2027" autoFocus onKeyDown={e => e.key === "Enter" && doNewSeason()} />
             <div style={S.modalBtns}>
               <button style={S.btnSec} onClick={() => setShowNS(false)}>Cancel</button>
-              <button style={S.btnPri} onClick={doNewSeason}>Archive and Start</button>
+              <button style={S.btnPri} onClick={doNewSeason}>Start</button>
             </div>
           </div>
         </div>
@@ -849,7 +1002,7 @@ function App() {
           <div>
             {isAdmin ? (
               <div style={S.adminRow}>
-                <button style={S.btnAdm} onClick={() => exportCSV(currentHands, season)}>CSV</button>
+                <button style={S.btnAdm} onClick={() => exportCSV(seasonHands, season)}>CSV</button>
                 {isCurrent && <button style={S.btnAdm} onClick={() => setShowNS(true)}>New Season</button>}
                 <span style={S.admBadge}>Admin</span>
               </div>
@@ -867,9 +1020,16 @@ function App() {
       </div>
 
       <div style={S.content}>
-        {tab === "leaderboard" && <Leaderboard hands={currentHands} season={season} />}
+        {syncing && <div style={S.syncBar}>Syncing...</div>}
+        {lastSynced && !syncing && (
+          <div style={S.syncBar}>
+            {fmtSynced()}
+            <button style={S.syncBtn} onClick={loadData}>Refresh</button>
+          </div>
+        )}
+        {tab === "leaderboard" && <Leaderboard hands={seasonHands} season={season} />}
         {tab === "submit" && isCurrent && <ScoreForm onSubmit={doSubmit} />}
-        {tab === "history" && <HandHistory hands={currentHands} isAdmin={isAdmin} onEdit={h => setEditing(h)} onDelete={doDelete} onNeedPin={fn => requireAdmin(fn)} />}
+        {tab === "history" && <HandHistory hands={seasonHands} isAdmin={isAdmin} onEdit={h => setEditing(h)} onDelete={h => doDelete(h)} onNeedPin={fn => requireAdmin(fn)} />}
         {tab === "resources" && <Resources />}
       </div>
 
@@ -879,7 +1039,7 @@ function App() {
 }
 
 const S = {
-  app: { minHeight: "100vh", background: "#f4f6fb", fontFamily: "Georgia, serif", color: "#002676" },
+  app: { minHeight: "100vh", background: "#f4f6fb", fontFamily: "Roboto, sans-serif", color: "#002676" },
   loading: { display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontSize: 18 },
   header: { background: "#002676", color: "#f4f6fb", padding: "14px 20px" },
   hdrInner: { maxWidth: 900, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 },
@@ -893,7 +1053,9 @@ const S = {
   tabOn: { padding: "11px 16px", background: "transparent", border: "none", borderBottom: "3px solid #c9a84c", color: "#f4f6fb", fontSize: 13, cursor: "pointer", fontWeight: 700 },
   tabOff: { padding: "11px 16px", background: "transparent", border: "none", borderBottom: "3px solid transparent", color: "#8aaad0", fontSize: 13, cursor: "pointer" },
   content: { maxWidth: 900, margin: "0 auto", padding: "24px 16px" },
-  seasonNotice: { background: "#eff6ff", border: "1px solid #f6d860", borderRadius: 6, padding: "10px 14px", fontSize: 13, color: "#1a3a6e", marginBottom: 16 },
+  syncBar: { fontSize: 12, color: "#5a7aaa", marginBottom: 12, display: "flex", alignItems: "center", gap: 12 },
+  syncBtn: { background: "transparent", border: "1px solid #a8bcd8", borderRadius: 4, padding: "2px 8px", fontSize: 11, cursor: "pointer", color: "#1a4a9e" },
+  seasonNotice: { background: "#eff6ff", border: "1px solid #93c5fd", borderRadius: 6, padding: "10px 14px", fontSize: 13, color: "#1a3a6e", marginBottom: 16 },
   rankingSummary: { fontSize: 14, color: "#1a4a9e", marginBottom: 16, fontStyle: "italic" },
   sumItem: { background: "#fff", border: "1px solid #e0d5c0", borderRadius: 8, padding: "12px 20px", flex: "1 1 100px", textAlign: "center" },
   sumVal: { fontSize: 22, fontWeight: 700 },
@@ -938,7 +1100,7 @@ const S = {
   plbl: { fontSize: 11, fontWeight: 700, color: "#1a4a9e", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 },
   numInput: { width: "100%", marginTop: 8, padding: "8px 10px", border: "1px solid #d1c4a8", borderRadius: 6, fontSize: 14, background: "#fff", boxSizing: "border-box" },
   hint: { fontSize: 12, color: "#5a7aaa", marginBottom: 6, fontStyle: "italic" },
-  ta: { width: "100%", padding: "9px 10px", border: "1px solid #d1c4a8", borderRadius: 6, fontSize: 14, background: "#f7f9fd", resize: "vertical", boxSizing: "border-box", fontFamily: "Georgia, serif" },
+  ta: { width: "100%", padding: "9px 10px", border: "1px solid #d1c4a8", borderRadius: 6, fontSize: 14, background: "#f7f9fd", resize: "vertical", boxSizing: "border-box", fontFamily: "Roboto, sans-serif" },
   fbtns: { display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 },
   err: { display: "block", fontSize: 12, color: "#e53e3e", marginTop: 4 },
   hList: { display: "flex", flexDirection: "column", gap: 10 },
