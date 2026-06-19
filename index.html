@@ -323,14 +323,13 @@ async function deleteHand(rowIndex) {
 }
 
 async function migrateLegacyData(allRows) {
-  // Batch append all historical rows
-  for (let i = 0; i < allRows.length; i++) {
-    await fetch(WORKER_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "append", row: allRows[i] }),
-    });
-  }
+  // Send all rows in one batch request
+  const resp = await fetch(WORKER_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "batchAppend", rows: allRows }),
+  });
+  return resp.json();
 }
 
 function computeLeaderboard(hands) {
