@@ -144,13 +144,17 @@ function computeLeaderboard(hands) {
       }
     }
   }
+
   const players = Object.values(stats);
-  const qualified = players.filter(p => p.totalHands >= 3);
-  const unqualified = players.filter(p => p.totalHands < 3 && p.totalHands > 0);
   for (const p of players) {
     p.avgScore = p.scoringHands > 0 ? p.totalScore / p.scoringHands : 0;
     p.mahjongRate = p.scoringHands > 0 ? p.mahjongs / p.scoringHands : 0;
   }
+
+  // A player is ranked after 3 total hands, including at least 1 scoring hand.
+  const ranked = players.filter(p => p.totalHands >= 3 && p.scoringHands >= 1);
+  const notRanked = players.filter(p => p.totalHands > 0 && (p.totalHands < 3 || p.scoringHands === 0));
+
   const rankBy = (arr, key, asc) => {
     const sorted = [...arr].sort((a, b) => asc ? a[key] - b[key] : b[key] - a[key]);
     let rank = 1;
@@ -159,16 +163,27 @@ function computeLeaderboard(hands) {
       sorted[i][key + "Rank"] = rank;
     }
   };
-  rankBy(qualified, "avgScore", false);
-  rankBy(qualified, "mahjongRate", false);
-  for (const p of qualified) p.combinedScore = p.avgScoreRank + p.mahjongRateRank;
-  const sortedQ = [...qualified].sort((a, b) => a.combinedScore - b.combinedScore);
-  let oRank = 1;
-  for (let i = 0; i < sortedQ.length; i++) {
-    if (i > 0 && sortedQ[i].combinedScore !== sortedQ[i-1].combinedScore) oRank = i + 1;
-    sortedQ[i].overallRank = oRank;
+
+  rankBy(ranked, "avgScore", false);
+  rankBy(ranked, "mahjongRate", false);
+  for (const p of ranked) p.combinedScore = p.avgScoreRank + p.mahjongRateRank;
+
+  const sortedRanked = [...ranked].sort((a, b) => a.combinedScore - b.combinedScore);
+  let overallRank = 1;
+  for (let i = 0; i < sortedRanked.length; i++) {
+    if (i > 0 && sortedRanked[i].combinedScore !== sortedRanked[i-1].combinedScore) overallRank = i + 1;
+    sortedRanked[i].overallRank = overallRank;
   }
-  return { qualified: sortedQ, unqualified };
+
+  const sortedNotRanked = [...notRanked].sort((a, b) => {
+    const aNeedsScoring = a.totalHands >= 3 && a.scoringHands === 0;
+    const bNeedsScoring = b.totalHands >= 3 && b.scoringHands === 0;
+    if (aNeedsScoring !== bNeedsScoring) return aNeedsScoring ? -1 : 1;
+    if (a.totalHands !== b.totalHands) return b.totalHands - a.totalHands;
+    return a.name.localeCompare(b.name);
+  });
+
+  return { ranked: sortedRanked, notRanked: sortedNotRanked };
 }
 
 function computeSummary(hands) {
@@ -329,11 +344,11 @@ function InstrBox() {
   );
   return (
     <div style={S.instrBox}>
-      <Sec id="q" title="Qualification and Scoring">
+      <Sec id="q" title="Ranking and Scoring">
         {[
-          ["Play ", <strong>3 or more hands</strong>, " to qualify for the leaderboard."],
-          ["Dead hands count toward qualification but do not affect averages or mahjong rate."],
-          ["Your ", <strong>combined score</strong>, " = avg points per hand rank + mahjong rate rank. Lower is better."],
+          ["Players are ranked after ", <strong>3 total hands</strong>, ", including at least 1 scoring hand."],
+          ["Dead hands count toward the 3-hand minimum but do not affect Avg Score or Mahjong Rate."],
+          [<strong>Combined Rank</strong>, " = Score Rank + Mahjong Rank. Lower is better."],
           [<strong>Mahjong rate</strong>, " = % of hands where you went out. Rewards consistency over volume."],
         ].map((parts, i) => (
           <div key={i} style={S.liRow}><span style={S.liBullet}>-</span><span>{parts.map((p,j) => <span key={j}>{p}</span>)}</span></div>
@@ -355,7 +370,7 @@ function InstrBox() {
       <Sec id="dead" title="Dead hands">
         {[
           ["Select ", <strong>Dead hand</strong>, " from the Who went out? dropdown."],
-          [<strong>Still select all 4 players</strong>, ". This is how the hand counts toward your qualifying total."],
+          [<strong>Still select all 4 players</strong>, ". This is how the hand counts toward the 3-hand minimum."],
           ["Score fields are hidden automatically. Do not enter 0 for a dead hand. It would drag down your average."],
         ].map((parts, i) => (
           <div key={i} style={S.liRow}><span style={S.liBullet}>-</span><span>{parts.map((p,j) => <span key={j}>{p}</span>)}</span></div>
@@ -466,7 +481,7 @@ function ScoreForm({ onSubmit, editHand, onCancel, knownPlayers, onDirtyChange }
         {errors.winnerMatch && <span style={S.err}>{errors.winnerMatch}</span>}
       </div>
 
-      {isDead && <div style={S.deadBanner}>Dead hand: select all 4 players below so this counts toward qualifying. No scores needed.</div>}
+      {isDead && <div style={S.deadBanner}>Dead hand: select all 4 players below so this counts toward the 3-hand minimum. No scores needed.</div>}
 
       <div style={S.pgrid}>
         {players.map((p, i) => (
@@ -519,35 +534,55 @@ function Leaderboard({ hands, season, isCurrent }) {
     "2019-2020": "6 hands were excluded from this season due to incomplete data.",
   };
   const notice = SEASON_NOTICES[season] || null;
-  const { qualified, unqualified } = useMemo(() => computeLeaderboard(hands), [hands]);
+  const { ranked, notRanked } = useMemo(() => computeLeaderboard(hands), [hands]);
   const summary = useMemo(() => computeSummary(hands), [hands]);
   const pct = r => (r * 100).toFixed(0) + "%";
   const medal = r => r === 1 ? "1st" : r === 2 ? "2nd" : r === 3 ? "3rd" : "";
+
   return (
     <div>
       <div style={isCurrent ? S.currentSeasonBadge : S.archivedSeasonBadge}>{isCurrent ? "Current Season" : "Archived Season"}</div>
       {notice && <div style={S.seasonNotice}>{notice}</div>}
-      <div style={S.rankingSummary}>Ranking: AVG Score rank + Mahjong Rate rank. Qualify with 3+ hands (including dead hands).</div>
+
       <div style={S.sumBar}>
-        {[["Qualified", qualified.length], ["Total Hands", summary.totalHands], ["Game Days", summary.gameDays], ["High Score", summary.highScore || "N/A"], ["Total Points", summary.totalPoints.toLocaleString()]].map(([l, v]) => (
-          <div key={l} style={S.sumItem}><div style={S.sumVal}>{v}</div><div style={S.sumLbl}>{l}</div></div>
+        {[["Ranked Players", ranked.length], ["Total Hands", summary.totalHands], ["Game Days", summary.gameDays], ["High Score", summary.highScore || "N/A"], ["Total Points", summary.totalPoints.toLocaleString()]].map(([label, value]) => (
+          <div key={label} style={S.sumItem}><div style={S.sumVal}>{value}</div><div style={S.sumLbl}>{label}</div></div>
         ))}
       </div>
-      {qualified.length === 0 && <div style={S.empty}>No qualified players yet. Need 3+ hands to qualify.</div>}
-      {qualified.length > 0 && (
+
+      <div style={S.metricsFootnote}>
+        Total Hands includes dead hands. Dead hands count toward the 3-hand minimum but are excluded from Avg Score and Mahjong Rate.
+      </div>
+
+      <div style={S.rankingSummary}>
+        <div style={S.rankingRule}>Combined Rank = Score Rank + Mahjong Rank. Lower is better.</div>
+        <div style={S.rankingDetail}>Players are ranked after 3 total hands, including at least 1 scoring hand.</div>
+      </div>
+
+      {ranked.length === 0 && (
+        <div style={S.empty}><strong>No ranked players yet.</strong> Players need 3 total hands, including at least 1 scoring hand.</div>
+      )}
+
+      {ranked.length > 0 && (
         <div style={S.tblWrap}>
           <table style={S.tbl}>
-            <thead><tr>{["Rank","Player","Scoring / Total","Mahjong Rate","Rate Rank","Avg Score","Avg Rank","Combined Rank"].map((h, i) => <th key={h} style={i === 0 ? S.thRank : i === 1 ? S.thName : S.th}>{h}</th>)}</tr></thead>
+            <thead>
+              <tr>
+                {["Rank", "Player", "Scoring Hands", "Avg Score", "Score Rank", "Mahjong Rate", "Mahjong Rank", "Combined Rank"].map((header, i) => (
+                  <th key={header} style={i === 0 ? S.thRank : i === 1 ? S.thName : S.th}>{header}</th>
+                ))}
+              </tr>
+            </thead>
             <tbody>
-              {qualified.map((p, i) => (
+              {ranked.map((p, i) => (
                 <tr key={p.name} style={i % 2 === 0 ? S.trE : S.trO}>
                   <td style={S.tdR}>{medal(p.overallRank) || p.overallRank}</td>
                   <td style={S.tdN}>{p.name}</td>
-                  <td style={S.td}>{p.scoringHands} / {p.totalHands}</td>
-                  <td style={S.td}>{pct(p.mahjongRate)}</td>
-                  <td style={S.td}>{p.mahjongRateRank}</td>
+                  <td style={S.td}>{p.scoringHands}</td>
                   <td style={S.td}>{p.avgScore.toFixed(0)}</td>
                   <td style={S.td}>{p.avgScoreRank}</td>
+                  <td style={S.td}>{pct(p.mahjongRate)} ({p.mahjongs}/{p.scoringHands})</td>
+                  <td style={S.td}>{p.mahjongRateRank}</td>
                   <td style={{ ...S.td, fontWeight: 700 }}>{p.combinedScore}</td>
                 </tr>
               ))}
@@ -555,19 +590,26 @@ function Leaderboard({ hands, season, isCurrent }) {
           </table>
         </div>
       )}
-      {unqualified.length > 0 && (
+
+      {notRanked.length > 0 && (
         <div style={S.uqSec}>
-          <div style={S.uqTitle}>Not Yet Qualified (need 3 hands)</div>
+          <div style={S.uqTitle}>Not Yet Ranked</div>
           <div style={S.uqGrid}>
-            {unqualified.sort((a, b) => b.scoringHands - a.scoringHands).map(p => (
-              <div key={p.name} style={S.uqChip}>
-                <span style={S.uqName}>{p.name}</span>
-                <span style={S.uqHands}>{p.totalHands}/3 hands</span>
-              </div>
-            ))}
+            {notRanked.map(p => {
+              const status = p.totalHands >= 3 && p.scoringHands === 0
+                ? "Needs a scoring hand"
+                : p.totalHands + " of 3 hands";
+              return (
+                <div key={p.name} style={S.uqChip}>
+                  <span style={S.uqName}>{p.name}</span>
+                  <span style={S.uqHands}>{status}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
+
       {isCurrent && <ShareCard />}
     </div>
   );
@@ -673,33 +715,33 @@ function Resources() {
 
       <Sec id="leaderboard" title="Leaderboard scoring (how the Cup is decided)">
         <p style={S.rp}>
-          The leaderboard ranks players by a <strong>combined score</strong>: the sum of two ranks.
+          The leaderboard ranks players by a <strong>Combined Rank</strong>: Score Rank + Mahjong Rank.
           Lower is better (like golf).
         </p>
         <div style={S.scoreBox}>
           <div style={S.sbRow}>
             <div>
-              <strong>Avg Score Rank</strong>
+              <strong>Score Rank</strong>
               <div style={S.sbSub}>Ranked by average points per scoring hand, highest first. Dead hands excluded from average.</div>
             </div>
           </div>
           <div style={S.sbPlus}>+</div>
           <div style={S.sbRow}>
             <div>
-              <strong>Mahjong Rate Rank</strong>
+              <strong>Mahjong Rank</strong>
               <div style={S.sbSub}>Ranked by % of scoring hands where you went out, highest first. Dead hands excluded from rate.</div>
             </div>
           </div>
           <div style={S.sbPlus}>=</div>
           <div style={S.sbRow}>
             <div>
-              <strong>Combined Score</strong>
+              <strong>Combined Rank</strong>
               <div style={S.sbSub}>Lower is better. Ties remain tied.</div>
             </div>
           </div>
         </div>
         <p style={S.rp}><strong>Why rate instead of count?</strong> Mahjong rate rewards going out consistently regardless of how many games you play. Going out 5 out of 10 hands (50%) ranks higher than 5 out of 20 (25%).</p>
-        <p style={S.rp}><strong>Qualification:</strong> Play 3 or more total hands (including dead hands) to appear on the leaderboard. Dead hands count toward this minimum but do not factor into averages or mahjong rate.</p>
+        <p style={S.rp}><strong>Ranking eligibility:</strong> Players are ranked after 3 total hands, including at least 1 scoring hand. Dead hands count toward the 3-hand minimum but do not factor into Avg Score or Mahjong Rate.</p>
       </Sec>
 
       <Sec id="counting" title="How to count your score">
@@ -921,12 +963,11 @@ function App() {
 
   const tabs = [["leaderboard","Leaderboard"], ...(isCurrent ? [["submit","Submit Scores"]] : []), ["history","Hand History"], ["resources","Resources"]];
 
-  const requestTabChange = (nextTab, nextSeason = season) => {
+  const requestTabChange = nextTab => {
     if (tab === "submit" && submitDirty && nextTab !== "submit") {
-      setPendingTab({ tab: nextTab, season: nextSeason });
+      setPendingTab(nextTab);
       return;
     }
-    if (nextSeason !== season) setSeason(nextSeason);
     setTab(nextTab);
   };
 
@@ -954,13 +995,7 @@ function App() {
       {pendingTab && (
         <LeaveFormModal
           onStay={() => setPendingTab(null)}
-          onLeave={() => {
-            const next = pendingTab;
-            setPendingTab(null);
-            setSubmitDirty(false);
-            if (next.season !== season) setSeason(next.season);
-            setTab(next.tab);
-          }}
+          onLeave={() => { const next = pendingTab; setPendingTab(null); setSubmitDirty(false); setTab(next); }}
         />
       )}
 
@@ -977,7 +1012,7 @@ function App() {
           <div>
             <div className="app-header-title" style={S.hdrTitle}>Oakley Family Mahjong Cup</div>
             <div style={{ marginTop: 4 }}>
-              <select style={S.seasonSel} value={season} onChange={e => requestTabChange("leaderboard", e.target.value)}>
+              <select style={S.seasonSel} value={season} onChange={e => { setSeason(e.target.value); requestTabChange("leaderboard"); }}>
                 {allSeasons.map(s => <option key={s} value={s}>{s === CURRENT_SEASON ? s + " (current)" : s}</option>)}
               </select>
             </div>
@@ -1048,7 +1083,10 @@ const S = {
   syncBar: { fontSize: 12, color: "#5a7aaa", marginBottom: 12, display: "flex", alignItems: "center", gap: 12 },
   syncBtn: { background: "transparent", border: "1px solid #a8bcd8", borderRadius: 4, padding: "2px 8px", fontSize: 11, cursor: "pointer", color: "#1a4a9e" },
   seasonNotice: { background: "#eff6ff", border: "1px solid #93c5fd", borderRadius: 6, padding: "10px 14px", fontSize: 13, color: "#1a3a6e", marginBottom: 16 },
-  rankingSummary: { fontSize: 14, color: "#1a4a9e", marginBottom: 16, fontStyle: "italic" },
+  rankingSummary: { fontSize: 14, color: "#1a3060", marginBottom: 16, lineHeight: 1.5 },
+  rankingRule: { fontWeight: 700 },
+  rankingDetail: { marginTop: 2 },
+  metricsFootnote: { fontSize: 12, color: "#5a7aaa", lineHeight: 1.5, marginTop: 8, marginBottom: 16 },
   sumItem: { background: "#fff", border: "1px solid #e0d5c0", borderRadius: 8, padding: "12px 20px", flex: "1 1 100px", textAlign: "center" },
   sumVal: { fontSize: 22, fontWeight: 700 },
   sumLbl: { fontSize: 11, color: "#1a4a9e", marginTop: 2, textTransform: "uppercase", letterSpacing: 0.5 },
