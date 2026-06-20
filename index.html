@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Oakley Family Mahjong Cup</title>
+  <meta name="theme-color" content="#002676" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🀄</text></svg>" />
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;600;700&display=swap" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
@@ -12,6 +14,16 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: "Roboto", sans-serif; background: #f4f6fb; color: #002676; }
     select, input, textarea, button { font-family: "Roboto", sans-serif; }
+    button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible {
+      outline: 3px solid #c9a84c;
+      outline-offset: 2px;
+    }
+    @media (max-width: 520px) {
+      .app-header { padding: 12px 14px !important; }
+      .app-header-inner { gap: 8px !important; align-items: flex-start !important; }
+      .app-header-title { font-size: 17px !important; line-height: 1.2; }
+      .app-tabs button { padding-left: 11px !important; padding-right: 11px !important; font-size: 12px !important; }
+    }
   </style>
 </head>
 <body>
@@ -29,6 +41,8 @@ const STORAGE_KEY = "mj-hands-2026";
 const SEASONS_KEY = "mj-seasons-2026";
 
 const WORKER_URL = "https://oakley-mahjong-worker.catherine-e-woodward.workers.dev";
+const APP_URL = "https://katie-lundquist.github.io/oakley-mahjong/";
+const QR_IMAGE = "./oakley_qr.png";
 
 // Convert a sheet row to a hand object
 function rowToHand(row, rowIndex) {
@@ -181,10 +195,17 @@ function PinModal({ onSuccess, onCancel }) {
   const [val, setVal] = useState("");
   const [err, setErr] = useState(false);
   const submit = () => { if (val === ADMIN_PIN) { onSuccess(); } else { setErr(true); setVal(""); } };
+
+  useEffect(() => {
+    const onKeyDown = e => { if (e.key === "Escape") onCancel(); };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onCancel]);
+
   return (
-    <div style={S.overlay}>
-      <div style={S.modal}>
-        <h3 style={S.modalTitle}>Admin Access</h3>
+    <div style={S.overlay} role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) onCancel(); }}>
+      <div style={S.modal} role="dialog" aria-modal="true" aria-labelledby="admin-modal-title">
+        <h3 id="admin-modal-title" style={S.modalTitle}>Admin Access</h3>
         <p style={S.modalSub}>Enter PIN to continue</p>
         <input type="password" maxLength={4} value={val}
           onChange={e => { setVal(e.target.value); setErr(false); }}
@@ -195,6 +216,99 @@ function PinModal({ onSuccess, onCancel }) {
         <div style={S.modalBtns}>
           <button style={S.btnSec} onClick={onCancel}>Cancel</button>
           <button style={S.btnPri} onClick={submit}>Enter</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function copyAppLink() {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(APP_URL);
+  }
+  window.prompt("Copy this link:", APP_URL);
+  return Promise.resolve();
+}
+
+function ShareCard() {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    await copyAppLink();
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
+
+  return (
+    <div style={S.shareCard}>
+      <div style={S.shareTitle}>Share the Mahjong Cup</div>
+      <img src={QR_IMAGE} alt="QR code for the Oakley Family Mahjong Cup" style={S.qrCardImage} />
+      <button style={S.btnSec} onClick={copy} aria-label="Copy the Oakley Family Mahjong Cup link">
+        {copied ? "Link copied!" : "Copy link"}
+      </button>
+    </div>
+  );
+}
+
+function ShareModal({ onClose }) {
+  const [copied, setCopied] = useState(false);
+  const closeBtnRef = React.useRef(null);
+  const canNativeShare = typeof navigator.share === "function";
+
+  useEffect(() => {
+    closeBtnRef.current?.focus();
+    const onKeyDown = e => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  const copy = async () => {
+    await copyAppLink();
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
+
+  const share = async () => {
+    try {
+      await navigator.share({ title: "Oakley Family Mahjong Cup", url: APP_URL });
+    } catch (e) {
+      if (e.name !== "AbortError") await copy();
+    }
+  };
+
+  return (
+    <div style={S.overlay} role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ ...S.modal, textAlign: "center" }} role="dialog" aria-modal="true" aria-labelledby="share-modal-title">
+        <h3 id="share-modal-title" style={S.modalTitle}>Share the Mahjong Cup</h3>
+        <img src={QR_IMAGE} alt="QR code for the Oakley Family Mahjong Cup" style={S.qrModalImage} />
+        <div style={S.shareModalBtns}>
+          <button style={S.btnSec} onClick={copy} aria-label="Copy the Oakley Family Mahjong Cup link">
+            {copied ? "Link copied!" : "Copy link"}
+          </button>
+          {canNativeShare && <button style={S.btnPri} onClick={share} aria-label="Share the Oakley Family Mahjong Cup">Share</button>}
+          <button ref={closeBtnRef} style={S.btnSec} onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LeaveFormModal({ onStay, onLeave }) {
+  const stayBtnRef = React.useRef(null);
+  useEffect(() => {
+    stayBtnRef.current?.focus();
+    const onKeyDown = e => { if (e.key === "Escape") onStay(); };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onStay]);
+
+  return (
+    <div style={S.overlay} role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) onStay(); }}>
+      <div style={S.modal} role="dialog" aria-modal="true" aria-labelledby="leave-modal-title">
+        <h3 id="leave-modal-title" style={S.modalTitle}>Leave unfinished entry?</h3>
+        <p style={S.modalSub}>You have an unfinished score entry. Leave without saving?</p>
+        <div style={S.modalBtns}>
+          <button ref={stayBtnRef} style={S.btnSec} onClick={onStay}>Stay</button>
+          <button style={S.btnPri} onClick={onLeave}>Leave</button>
         </div>
       </div>
     </div>
@@ -255,7 +369,7 @@ function InstrBox() {
   );
 }
 
-function ScoreForm({ onSubmit, editHand, onCancel, knownPlayers }) {
+function ScoreForm({ onSubmit, editHand, onCancel, knownPlayers, onDirtyChange }) {
   const blank = { name: "", score: "", isNew: false };
   const [winner, setWinner] = useState(editHand ? editHand.winner : "");
   const [winnerIsNew, setWinnerIsNew] = useState(false);
@@ -264,6 +378,15 @@ function ScoreForm({ onSubmit, editHand, onCancel, knownPlayers }) {
   const [notes, setNotes] = useState(editHand ? editHand.notes : "");
   const [errors, setErrors] = useState({});
   const isDead = winner === "Dead hand";
+  const isDirty = !editHand && (
+    Boolean(winner) || winnerIsNew || Boolean(winnerNewText.trim()) || Boolean(notes.trim()) ||
+    players.some(p => Boolean(p.name) || Boolean(p.score) || p.isNew)
+  );
+
+  useEffect(() => {
+    if (onDirtyChange) onDirtyChange(isDirty);
+    return () => { if (onDirtyChange) onDirtyChange(false); };
+  }, [isDirty, onDirtyChange]);
 
   // Merge base + known players, deduplicated and sorted
   const allKnown = [...new Set([...BASE_PLAYERS, ...knownPlayers])].sort();
@@ -391,7 +514,7 @@ function ScoreForm({ onSubmit, editHand, onCancel, knownPlayers }) {
   );
 }
 
-function Leaderboard({ hands, season }) {
+function Leaderboard({ hands, season, isCurrent }) {
   const SEASON_NOTICES = {
     "2019-2020": "6 hands were excluded from this season due to incomplete data.",
   };
@@ -402,6 +525,7 @@ function Leaderboard({ hands, season }) {
   const medal = r => r === 1 ? "1st" : r === 2 ? "2nd" : r === 3 ? "3rd" : "";
   return (
     <div>
+      <div style={isCurrent ? S.currentSeasonBadge : S.archivedSeasonBadge}>{isCurrent ? "Current Season" : "Archived Season"}</div>
       {notice && <div style={S.seasonNotice}>{notice}</div>}
       <div style={S.rankingSummary}>Ranking: AVG Score rank + Mahjong Rate rank. Qualify with 3+ hands (including dead hands).</div>
       <div style={S.sumBar}>
@@ -413,13 +537,13 @@ function Leaderboard({ hands, season }) {
       {qualified.length > 0 && (
         <div style={S.tblWrap}>
           <table style={S.tbl}>
-            <thead><tr>{["Rank","Player","Scoring Hands","Mahjong Rate","Rate Rank","Avg Score","Avg Rank","Combined"].map((h, i) => <th key={h} style={i === 0 ? S.thRank : i === 1 ? S.thName : S.th}>{h}</th>)}</tr></thead>
+            <thead><tr>{["Rank","Player","Scoring / Total","Mahjong Rate","Rate Rank","Avg Score","Avg Rank","Combined Rank"].map((h, i) => <th key={h} style={i === 0 ? S.thRank : i === 1 ? S.thName : S.th}>{h}</th>)}</tr></thead>
             <tbody>
               {qualified.map((p, i) => (
                 <tr key={p.name} style={i % 2 === 0 ? S.trE : S.trO}>
                   <td style={S.tdR}>{medal(p.overallRank) || p.overallRank}</td>
                   <td style={S.tdN}>{p.name}</td>
-                  <td style={S.td}>{p.scoringHands}</td>
+                  <td style={S.td}>{p.scoringHands} / {p.totalHands}</td>
                   <td style={S.td}>{pct(p.mahjongRate)}</td>
                   <td style={S.td}>{p.mahjongRateRank}</td>
                   <td style={S.td}>{p.avgScore.toFixed(0)}</td>
@@ -444,6 +568,7 @@ function Leaderboard({ hands, season }) {
           </div>
         </div>
       )}
+      {isCurrent && <ShareCard />}
     </div>
   );
 }
@@ -696,21 +821,26 @@ function App() {
   const [showPin, setShowPin] = useState(false);
   const [pinCb, setPinCb] = useState(null);
   const [editing, setEditing] = useState(null);
-  const [showNS, setShowNS] = useState(false);
-  const [nsName, setNsName] = useState("");
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState(null);
+  const [loadError, setLoadError] = useState(false);
+  const [showShare, setShowShare] = useState(false);
+  const [submitDirty, setSubmitDirty] = useState(false);
+  const [pendingTab, setPendingTab] = useState(null);
+  const shareTriggerRef = React.useRef(null);
 
 
   const loadData = async () => {
     try {
       setSyncing(true);
+      setLoadError(false);
       const hands = await fetchAllHands();
       setAllHands(hands);
       setLastSynced(new Date());
     } catch(e) {
+      setLoadError(true);
       showToast("Could not connect to database.", "err");
     } finally {
       setSyncing(false);
@@ -719,6 +849,12 @@ function App() {
   };
 
   useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    if (!editing) return;
+    const onKeyDown = e => { if (e.key === "Escape") setEditing(null); };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [editing]);
 
   const showToast = (msg, type) => { setToast({ msg, type: type || "ok" }); setTimeout(() => setToast(null), 3000); };
   const requireAdmin = fn => { if (isAdmin) { fn(); return; } setPinCb(() => fn); setShowPin(true); };
@@ -776,22 +912,28 @@ function App() {
   };
 
 
-  const doNewSeason = async () => {
-    if (!nsName.trim()) return;
-    setShowNS(false);
-    setNsName("");
-    setSeason(CURRENT_SEASON);
-    showToast("Ready for new season " + nsName + "!");
-  };
-
   const fmtSynced = () => {
     if (!lastSynced) return "";
     const diff = Math.floor((new Date() - lastSynced) / 60000);
-    if (diff < 1) return "Synced just now";
-    return "Synced " + diff + " min ago";
+    if (diff < 1) return "Leaderboard updated just now";
+    return "Leaderboard updated " + diff + " min ago";
   };
 
   const tabs = [["leaderboard","Leaderboard"], ...(isCurrent ? [["submit","Submit Scores"]] : []), ["history","Hand History"], ["resources","Resources"]];
+
+  const requestTabChange = (nextTab, nextSeason = season) => {
+    if (tab === "submit" && submitDirty && nextTab !== "submit") {
+      setPendingTab({ tab: nextTab, season: nextSeason });
+      return;
+    }
+    if (nextSeason !== season) setSeason(nextSeason);
+    setTab(nextTab);
+  };
+
+  const closeShare = () => {
+    setShowShare(false);
+    setTimeout(() => shareTriggerRef.current?.focus(), 0);
+  };
 
   if (loading) return <div style={S.loading}>Loading...</div>;
 
@@ -807,35 +949,35 @@ function App() {
       )}
 
 
-      {showNS && (
-        <div style={S.overlay}>
-          <div style={S.modal}>
-            <h3 style={S.modalTitle}>Start New Season</h3>
-            <p style={S.modalSub}>Enter the new season name:</p>
-            <input style={S.pinInput} value={nsName} onChange={e => setNsName(e.target.value)}
-              placeholder="e.g. 2027" autoFocus onKeyDown={e => e.key === "Enter" && doNewSeason()} />
-            <div style={S.modalBtns}>
-              <button style={S.btnSec} onClick={() => setShowNS(false)}>Cancel</button>
-              <button style={S.btnPri} onClick={doNewSeason}>Start</button>
-            </div>
-          </div>
-        </div>
+      {showShare && <ShareModal onClose={closeShare} />}
+
+      {pendingTab && (
+        <LeaveFormModal
+          onStay={() => setPendingTab(null)}
+          onLeave={() => {
+            const next = pendingTab;
+            setPendingTab(null);
+            setSubmitDirty(false);
+            if (next.season !== season) setSeason(next.season);
+            setTab(next.tab);
+          }}
+        />
       )}
 
       {editing && (
-        <div style={S.overlay}>
-          <div style={{ ...S.modal, maxWidth: 560, width: "95%", padding: 0, background: "transparent", boxShadow: "none" }}>
+        <div style={S.overlay} role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setEditing(null); }}>
+          <div style={{ ...S.modal, maxWidth: 560, width: "95%", padding: 0, background: "transparent", boxShadow: "none" }} role="dialog" aria-modal="true" aria-label="Edit hand">
             <ScoreForm editHand={editing} onSubmit={doEdit} onCancel={() => setEditing(null)} knownPlayers={knownPlayers} />
           </div>
         </div>
       )}
 
-      <div style={S.header}>
-        <div style={S.hdrInner}>
+      <div className="app-header" style={S.header}>
+        <div className="app-header-inner" style={S.hdrInner}>
           <div>
-            <div style={S.hdrTitle}>Oakley Family Mahjong Cup</div>
+            <div className="app-header-title" style={S.hdrTitle}>Oakley Family Mahjong Cup</div>
             <div style={{ marginTop: 4 }}>
-              <select style={S.seasonSel} value={season} onChange={e => { setSeason(e.target.value); setTab("leaderboard"); }}>
+              <select style={S.seasonSel} value={season} onChange={e => requestTabChange("leaderboard", e.target.value)}>
                 {allSeasons.map(s => <option key={s} value={s}>{s === CURRENT_SEASON ? s + " (current)" : s}</option>)}
               </select>
             </div>
@@ -844,7 +986,6 @@ function App() {
             {isAdmin ? (
               <div style={S.adminRow}>
                 <button style={S.btnAdm} onClick={() => exportCSV(seasonHands, season)}>CSV</button>
-                {isCurrent && <button style={S.btnAdm} onClick={() => setShowNS(true)}>New Season</button>}
                 <span style={S.admBadge}>Admin</span>
               </div>
             ) : (
@@ -854,27 +995,37 @@ function App() {
         </div>
       </div>
 
-      <div style={S.tabs}>
+      <div className="app-tabs" style={S.tabs}>
         {tabs.map(([id, label]) => (
-          <button key={id} style={tab === id ? S.tabOn : S.tabOff} onClick={() => setTab(id)}>{label}</button>
+          <button key={id} style={tab === id ? S.tabOn : S.tabOff} onClick={() => requestTabChange(id)}>{label}</button>
         ))}
       </div>
 
       <div style={S.content}>
         {syncing && <div style={S.syncBar}>Syncing...</div>}
-        {lastSynced && !syncing && (
+        {lastSynced && !syncing && !loadError && (
           <div style={S.syncBar}>
             {fmtSynced()}
             <button style={S.syncBtn} onClick={loadData}>Refresh</button>
           </div>
         )}
-        {tab === "leaderboard" && <Leaderboard hands={seasonHands} season={season} />}
-        {tab === "submit" && isCurrent && <ScoreForm onSubmit={doSubmit} knownPlayers={knownPlayers} />}
+        {loadError && (
+          <div style={S.loadError} role="alert">
+            <div>Could not load scores.</div>
+            <button style={S.btnPri} onClick={loadData}>Try again</button>
+          </div>
+        )}
+        {tab === "leaderboard" && <Leaderboard hands={seasonHands} season={season} isCurrent={isCurrent} />}
+        {tab === "submit" && isCurrent && <ScoreForm onSubmit={doSubmit} knownPlayers={knownPlayers} onDirtyChange={setSubmitDirty} />}
         {tab === "history" && <HandHistory hands={seasonHands} isAdmin={isAdmin} onEdit={h => setEditing(h)} onDelete={h => doDelete(h)} onNeedPin={fn => requireAdmin(fn)} />}
         {tab === "resources" && <Resources />}
       </div>
 
-      <div style={S.footer}>Oakley Family Mahjong Cup</div>
+      <div style={S.footer}>
+        <span>© {new Date().getFullYear()} Oakley Family Mahjong Cup</span>
+        <span aria-hidden="true"> · </span>
+        <button ref={shareTriggerRef} style={S.footerLink} onClick={() => setShowShare(true)}>Share app</button>
+      </div>
     </div>
   );
 }
@@ -971,6 +1122,15 @@ const S = {
   pinInput: { width: "100%", padding: "10px 12px", border: "2px solid #d1c4a8", borderRadius: 6, fontSize: 20, textAlign: "center", letterSpacing: 8, boxSizing: "border-box" },
   pinErr: { color: "#e53e3e", fontSize: 13, marginTop: 6, textAlign: "center" },
   toast: { position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", color: "#fff", padding: "10px 24px", borderRadius: 20, fontSize: 14, zIndex: 200, boxShadow: "0 4px 12px rgba(0,0,0,0.2)" },
+  currentSeasonBadge: { display: "inline-block", background: "#dbeafe", color: "#1a4a9e", border: "1px solid #93c5fd", borderRadius: 999, padding: "4px 10px", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 },
+  archivedSeasonBadge: { display: "inline-block", background: "#edf2f7", color: "#5a6475", border: "1px solid #cbd5e0", borderRadius: 999, padding: "4px 10px", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 },
+  shareCard: { maxWidth: 320, margin: "28px auto 0", background: "#fff", border: "1px solid #e0d5c0", borderRadius: 10, padding: 18, textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 },
+  shareTitle: { fontSize: 16, fontWeight: 700, color: "#002676" },
+  qrCardImage: { width: 160, height: 160, objectFit: "contain", display: "block" },
+  qrModalImage: { width: 220, height: 220, maxWidth: "100%", objectFit: "contain", display: "block", margin: "14px auto" },
+  shareModalBtns: { display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap", marginTop: 14 },
+  loadError: { background: "#fff5f5", border: "1px solid #feb2b2", color: "#9b2c2c", borderRadius: 8, padding: 16, marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", fontSize: 14, fontWeight: 600 },
+  footerLink: { background: "transparent", border: "none", padding: 0, color: "#1a4a9e", textDecoration: "underline", fontSize: 11, cursor: "pointer" },
   footer: { textAlign: "center", padding: "20px 16px", fontSize: 11, color: "#5a7aaa", borderTop: "1px solid #e0d5c0", marginTop: 40 },
   resSec: { border: "1px solid #e0d5c0", borderRadius: 8, marginBottom: 10, overflow: "hidden" },
   resBtn: { width: "100%", background: "#f0f4fb", border: "none", padding: "13px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 15, fontWeight: 700, cursor: "pointer", textAlign: "left" },
