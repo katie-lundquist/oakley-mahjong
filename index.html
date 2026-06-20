@@ -20,225 +20,13 @@
     const { useState, useEffect, useMemo } = React;
 
 
+
+
 const BASE_PLAYERS = ["Brooke","Bryan","Caitlyn","Drew","Emily","Jack","Jon","Judi","Katie","Margot","Marissa","Rick","Robbie","Robin","Sue","Tommy"];
 const ADMIN_PIN = "3395";
 const CURRENT_SEASON = "2026";
 const STORAGE_KEY = "mj-hands-2026";
 const SEASONS_KEY = "mj-seasons-2026";
-
-const H = [
-  {id:"h1",timestamp:"2024-08-01T16:45:06",winner:"Judi",players:[{name:"Bryan",score:"28"},{name:"Judi",score:"30"},{name:"Jack",score:"96"},{name:"Marissa",score:"10"}],notes:""},
-  {id:"h2",timestamp:"2024-08-01T16:46:17",winner:"Bryan",players:[{name:"Bryan",score:"38"},{name:"Jack",score:"56"},{name:"Robbie",score:"18"},{name:"Marissa",score:"36"}],notes:""},
-  {id:"h3",timestamp:"2024-08-01T16:47:35",winner:"Caitlyn",players:[{name:"Caitlyn",score:"144"},{name:"Jack",score:"40"},{name:"Robin",score:"20"},{name:"Marissa",score:"36"}],notes:""},
-  {id:"h4",timestamp:"2024-08-01T16:48:25",winner:"Jack",players:[{name:"Jack",score:"38"},{name:"Robin",score:"26"},{name:"Marissa",score:"16"},{name:"Caitlyn",score:"6"}],notes:""},
-  {id:"h5",timestamp:"2024-08-02T09:13:43",winner:"Jack",players:[{name:"Jack",score:"128"},{name:"Marissa",score:"0"},{name:"Robbie",score:"12"},{name:"Bryan",score:"48"}],notes:""},
-  {id:"h6",timestamp:"2024-08-02T09:14:35",winner:"Robbie",players:[{name:"Robbie",score:"136"},{name:"Jack",score:"40"},{name:"Marissa",score:"192"},{name:"Caitlyn",score:"28"}],notes:""},
-  {id:"h7",timestamp:"2024-08-02T09:15:35",winner:"Robin",players:[{name:"Robin",score:"56"},{name:"Robbie",score:"56"},{name:"Marissa",score:"28"},{name:"Jack",score:"44"}],notes:""},
-  {id:"h8",timestamp:"2024-08-02T09:16:33",winner:"Dead hand",players:[{name:"Robin",score:"X"},{name:"Robbie",score:"X"},{name:"Marissa",score:"X"},{name:"Jack",score:"X"}],notes:""},
-  {id:"h9",timestamp:"2024-08-02T17:58:02",winner:"Robbie",players:[{name:"Robbie",score:"26"},{name:"Marissa",score:"20"},{name:"Judi",score:"56"},{name:"Robin",score:"36"}],notes:""},
-  {id:"h10",timestamp:"2024-08-02T17:58:57",winner:"Robbie",players:[{name:"Robbie",score:"224"},{name:"Marissa",score:"12"},{name:"Judi",score:"2"},{name:"Robin",score:"12"}],notes:""},
-  {id:"h11",timestamp:"2024-08-02T21:10:29",winner:"Marissa",players:[{name:"Robbie",score:"60"},{name:"Marissa",score:"32"},{name:"Judi",score:"28"},{name:"Robin",score:"256"}],notes:""},
-  {id:"h12",timestamp:"2024-08-02T21:11:48",winner:"Jack",players:[{name:"Robbie",score:"32"},{name:"Marissa",score:"160"},{name:"Jack",score:"56"},{name:"Robin",score:"112"}],notes:""},
-  {id:"h13",timestamp:"2024-08-02T21:13:05",winner:"Dead hand",players:[{name:"Robbie",score:"X"},{name:"Marissa",score:"X"},{name:"Jack",score:"X"},{name:"Robin",score:"X"}],notes:""},
-  {id:"h14",timestamp:"2024-08-02T21:13:58",winner:"Marissa",players:[{name:"Jack",score:"8"},{name:"Marissa",score:"144"},{name:"Judi",score:"12"},{name:"Robin",score:"80"}],notes:""},
-  {id:"h15",timestamp:"2024-08-02T21:14:59",winner:"Marissa",players:[{name:"Robbie",score:"20"},{name:"Marissa",score:"72"},{name:"Judi",score:"6"},{name:"Robin",score:"40"}],notes:""},
-  {id:"h16",timestamp:"2024-08-02T21:16:38",winner:"Dead hand",players:[{name:"Robbie",score:"X"},{name:"Marissa",score:"X"},{name:"Judi",score:"X"},{name:"Robin",score:"X"}],notes:""},
-  {id:"h17",timestamp:"2024-08-02T21:17:37",winner:"Robbie",players:[{name:"Robbie",score:"72"},{name:"Marissa",score:"10"},{name:"Judi",score:"64"},{name:"Robin",score:"12"}],notes:""},
-  {id:"h18",timestamp:"2024-08-02T21:22:16",winner:"Judi",players:[{name:"Robbie",score:"4"},{name:"Marissa",score:"28"},{name:"Judi",score:"32"},{name:"Robin",score:"24"}],notes:""},
-  {id:"h19",timestamp:"2024-08-02T21:23:17",winner:"Robin",players:[{name:"Robbie",score:"20"},{name:"Marissa",score:"32"},{name:"Judi",score:"48"},{name:"Robin",score:"84"}],notes:""},
-  {id:"h20",timestamp:"2024-08-03T17:55:52",winner:"Judi",players:[{name:"Judi",score:"68"},{name:"Robbie",score:"48"},{name:"Marissa",score:"36"},{name:"Caitlyn",score:"6"}],notes:""},
-  {id:"h21",timestamp:"2024-08-03T21:22:51",winner:"Robbie",players:[{name:"Marissa",score:"80"},{name:"Robin",score:"24"},{name:"Robbie",score:"24"},{name:"Judi",score:"76"}],notes:""},
-  {id:"h22",timestamp:"2024-08-03T22:10:11",winner:"Robbie",players:[{name:"Jack",score:"10"},{name:"Marissa",score:"6"},{name:"Robbie",score:"72"},{name:"Judi",score:"4"}],notes:""},
-  {id:"h23",timestamp:"2024-08-03T22:11:14",winner:"Robbie",players:[{name:"Jack",score:"156"},{name:"Robin",score:"96"},{name:"Robbie",score:"56"},{name:"Marissa",score:"4"}],notes:""},
-  {id:"h24",timestamp:"2024-08-03T22:12:16",winner:"Robbie",players:[{name:"Jack",score:"32"},{name:"Robin",score:"16"},{name:"Robbie",score:"96"},{name:"Marissa",score:"14"}],notes:""},
-  {id:"h25",timestamp:"2024-12-25T14:45:04",winner:"Rick",players:[{name:"Rick",score:"80"},{name:"Jon",score:"32"},{name:"Brooke",score:"10"},{name:"Tommy",score:"16"}],notes:""},
-  {id:"h26",timestamp:"2024-12-25T15:10:59",winner:"Tommy",players:[{name:"Tommy",score:"108"},{name:"Brooke",score:"12"},{name:"Rick",score:"608"},{name:"Jon",score:"40"}],notes:""},
-  {id:"h27",timestamp:"2024-12-25T18:47:49",winner:"Katie",players:[{name:"Katie",score:"144"},{name:"Margot",score:"576"},{name:"Rick",score:"12"},{name:"Jon",score:"2"}],notes:""},
-  {id:"h28",timestamp:"2024-12-25T19:07:03",winner:"Margot",players:[{name:"Margot",score:"52"},{name:"Rick",score:"80"},{name:"Jon",score:"16"},{name:"Katie",score:"80"}],notes:""},
-  {id:"h29",timestamp:"2024-12-25T19:42:15",winner:"Rick",players:[{name:"Katie",score:"144"},{name:"Margot",score:"72"},{name:"Rick",score:"24"},{name:"Jon",score:"16"}],notes:"Katie, Margot, and Jon all ended up with 12 tiles"},
-  {id:"h30",timestamp:"2024-12-25T20:02:33",winner:"Rick",players:[{name:"Rick",score:"64"},{name:"Jon",score:"8"},{name:"Katie",score:"36"},{name:"Margot",score:"6"}],notes:""},
-  {id:"h31",timestamp:"2024-12-25T20:18:53",winner:"Rick",players:[{name:"Rick",score:"68"},{name:"Margot",score:"24"},{name:"Jon",score:"20"},{name:"Katie",score:"40"}],notes:""},
-  {id:"h32",timestamp:"2024-12-28T12:20:27",winner:"Katie",players:[{name:"Jon",score:"16"},{name:"Katie",score:"216"},{name:"Rick",score:"32"},{name:"Judi",score:"80"}],notes:""},
-  {id:"h33",timestamp:"2024-12-28T12:34:37",winner:"Margot",players:[{name:"Margot",score:"30"},{name:"Katie",score:"8"},{name:"Rick",score:"44"},{name:"Judi",score:"12"}],notes:""},
-  {id:"h34",timestamp:"2024-12-28T12:50:22",winner:"Rick",players:[{name:"Rick",score:"28"},{name:"Judi",score:"16"},{name:"Margot",score:"2"},{name:"Jon",score:"14"}],notes:""},
-  {id:"h35",timestamp:"2024-12-28T13:05:57",winner:"Katie",players:[{name:"Katie",score:"72"},{name:"Jon",score:"4"},{name:"Rick",score:"128"},{name:"Judi",score:"128"}],notes:""},
-];
-
-const H2023 = [
-  {id:"y23h1",timestamp:"2023-06-30T23:06:55",winner:"Robin",players:[{name:"Robin",score:"40"},{name:"Rick",score:"6"},{name:"Robbie",score:"128"},{name:"Jon",score:"4"}],notes:""},
-  {id:"y23h2",timestamp:"2023-06-30T22:56:18",winner:"Dead hand",players:[{name:"Robin",score:"X"},{name:"Rick",score:"X"},{name:"Robbie",score:"X"},{name:"Jon",score:"X"}],notes:""},
-  {id:"y23h3",timestamp:"2023-06-30T23:27:58",winner:"Robin",players:[{name:"Robin",score:"30"},{name:"Judi",score:"20"},{name:"Robbie",score:"16"},{name:"Katie",score:"24"}],notes:""},
-  {id:"y23h4",timestamp:"2023-07-01T21:37:21",winner:"Dead hand",players:[{name:"Robin",score:"X"},{name:"Marissa",score:"X"},{name:"Judi",score:"X"},{name:"Robbie",score:"X"}],notes:""},
-  {id:"y23h5",timestamp:"2023-07-01T21:56:45",winner:"Rick",players:[{name:"Rick",score:"32"},{name:"Bryan",score:"24"},{name:"Jon",score:"4"},{name:"Katie",score:"4"}],notes:"Rick went out on the 5th tile"},
-  {id:"y23h6",timestamp:"2023-07-01T21:57:22",winner:"Judi",players:[{name:"Marissa",score:"208"},{name:"Judi",score:"22"},{name:"Robbie",score:"2"},{name:"Robin",score:"36"}],notes:""},
-  {id:"y23h7",timestamp:"2023-07-01T22:09:22",winner:"Bryan",players:[{name:"Bryan",score:"24"},{name:"Jon",score:"2"},{name:"Katie",score:"18"},{name:"Rick",score:"14"}],notes:""},
-  {id:"y23h8",timestamp:"2023-07-01T22:14:06",winner:"Robin",players:[{name:"Robin",score:"28"},{name:"Marissa",score:"6"},{name:"Judi",score:"20"},{name:"Robbie",score:"88"}],notes:""},
-  {id:"y23h9",timestamp:"2023-07-01T22:24:08",winner:"Jon",players:[{name:"Jon",score:"64"},{name:"Katie",score:"4"},{name:"Rick",score:"16"},{name:"Bryan",score:"20"}],notes:""},
-  {id:"y23h10",timestamp:"2023-07-01T22:37:40",winner:"Judi",players:[{name:"Judi",score:"64"},{name:"Marissa",score:"40"},{name:"Robbie",score:"32"},{name:"Robin",score:"20"}],notes:""},
-  {id:"y23h11",timestamp:"2023-07-01T22:46:01",winner:"Rick",players:[{name:"Rick",score:"104"},{name:"Bryan",score:"80"},{name:"Jon",score:"24"},{name:"Katie",score:"88"}],notes:""},
-  {id:"y23h12",timestamp:"2023-07-01T22:54:16",winner:"Judi",players:[{name:"Judi",score:"44"},{name:"Marissa",score:"8"},{name:"Robbie",score:"6"},{name:"Robin",score:"36"}],notes:""},
-  {id:"y23h13",timestamp:"2023-07-01T23:14:48",winner:"Jon",players:[{name:"Jon",score:"44"},{name:"Katie",score:"12"},{name:"Rick",score:"48"},{name:"Bryan",score:"14"}],notes:""},
-  {id:"y23h14",timestamp:"2023-07-01T23:16:00",winner:"Robin",players:[{name:"Robin",score:"72"},{name:"Robbie",score:"40"},{name:"Judi",score:"24"},{name:"Marissa",score:"20"}],notes:""},
-  {id:"y23h15",timestamp:"2023-07-01T23:30:15",winner:"Judi",players:[{name:"Judi",score:"24"},{name:"Robin",score:"8"},{name:"Robbie",score:"12"},{name:"Marissa",score:"32"}],notes:""},
-  {id:"y23h16",timestamp:"2023-07-02T10:53:24",winner:"Tommy",players:[{name:"Tommy",score:"40"},{name:"Robin",score:"364"},{name:"Katie",score:"28"},{name:"Brooke",score:"10"}],notes:""},
-  {id:"y23h17",timestamp:"2023-07-02T11:09:23",winner:"Dead hand",players:[{name:"Rick",score:"X"},{name:"Brooke",score:"X"},{name:"Jon",score:"X"},{name:"Tommy",score:"X"}],notes:""},
-  {id:"y23h18",timestamp:"2023-07-02T11:25:37",winner:"Jon",players:[{name:"Jon",score:"42"},{name:"Brooke",score:"80"},{name:"Tommy",score:"144"},{name:"Katie",score:"12"}],notes:""},
-  {id:"y23h19",timestamp:"2023-07-02T11:56:48",winner:"Dead hand",players:[{name:"Brooke",score:"X"},{name:"Robin",score:"X"},{name:"Katie",score:"X"},{name:"Jon",score:"X"}],notes:""},
-  {id:"y23h20",timestamp:"2023-07-02T12:15:53",winner:"Dead hand",players:[{name:"Jon",score:"X"},{name:"Katie",score:"X"},{name:"Robin",score:"X"},{name:"Brooke",score:"X"}],notes:""},
-  {id:"y23h21",timestamp:"2023-07-02T12:31:45",winner:"Rick",players:[{name:"Margot",score:"10"},{name:"Jon",score:"6"},{name:"Rick",score:"336"},{name:"Katie",score:"28"}],notes:""},
-  {id:"y23h22",timestamp:"2023-07-02T12:54:30",winner:"Dead hand",players:[{name:"Jon",score:"X"},{name:"Margot",score:"X"},{name:"Rick",score:"X"},{name:"Robin",score:"X"}],notes:"Rick sabotaged Robin's hand with 6 flowers and 832 points by taking one for the team and causing a dead hand. FOUR DOT."},
-  {id:"y23h23",timestamp:"2023-07-02T13:09:49",winner:"Robin",players:[{name:"Robin",score:"32"},{name:"Rick",score:"28"},{name:"Katie",score:"32"},{name:"Margot",score:"4"}],notes:""},
-  {id:"y23h24",timestamp:"2023-07-02T21:16:01",winner:"Drew",players:[{name:"Drew",score:"92"},{name:"Emily",score:"20"},{name:"Jon",score:"14"},{name:"Tommy",score:"24"}],notes:""},
-  {id:"y23h25",timestamp:"2023-07-02T21:30:59",winner:"Marissa",players:[{name:"Bryan",score:"28"},{name:"Marissa",score:"136"},{name:"Robbie",score:"20"},{name:"Robin",score:"12"}],notes:""},
-  {id:"y23h26",timestamp:"2023-07-02T21:54:48",winner:"Margot",players:[{name:"Margot",score:"68"},{name:"Katie",score:"64"},{name:"Rick",score:"68"},{name:"Jon",score:"12"}],notes:"All flowers were in play within a couple rounds"},
-  {id:"y23h27",timestamp:"2023-07-02T21:57:58",winner:"Bryan",players:[{name:"Bryan",score:"34"},{name:"Judi",score:"12"},{name:"Marissa",score:"24"},{name:"Caitlyn",score:"28"}],notes:""},
-  {id:"y23h28",timestamp:"2023-07-02T22:09:23",winner:"Katie",players:[{name:"Katie",score:"64"},{name:"Rick",score:"4"},{name:"Jon",score:"16"},{name:"Margot",score:"64"}],notes:""},
-  {id:"y23h29",timestamp:"2023-07-02T22:16:15",winner:"Bryan",players:[{name:"Bryan",score:"216"},{name:"Robbie",score:"4"},{name:"Caitlyn",score:"32"},{name:"Robin",score:"8"}],notes:""},
-  {id:"y23h30",timestamp:"2023-07-02T22:30:27",winner:"Jon",players:[{name:"Jon",score:"88"},{name:"Margot",score:"6"},{name:"Katie",score:"14"},{name:"Rick",score:"40"}],notes:""},
-  {id:"y23h31",timestamp:"2023-07-02T22:33:30",winner:"Bryan",players:[{name:"Bryan",score:"72"},{name:"Judi",score:"12"},{name:"Marissa",score:"14"},{name:"Caitlyn",score:"20"}],notes:""},
-  {id:"y23h32",timestamp:"2023-07-02T22:44:21",winner:"Jon",players:[{name:"Jon",score:"324"},{name:"Rick",score:"4"},{name:"Katie",score:"0"},{name:"Margot",score:"24"}],notes:"Jon got the Seven Sisters (7 pairs)!"},
-  {id:"y23h33",timestamp:"2023-07-03T17:09:57",winner:"Drew",players:[{name:"Drew",score:"26"},{name:"Emily",score:"6"},{name:"Judi",score:"6"},{name:"Robin",score:"12"}],notes:""},
-  {id:"y23h34",timestamp:"2023-07-03T17:27:59",winner:"Judi",players:[{name:"Judi",score:"32"},{name:"Drew",score:"112"},{name:"Emily",score:"10"},{name:"Robin",score:"6"}],notes:""},
-  {id:"y23h35",timestamp:"2023-07-03T17:47:32",winner:"Robin",players:[{name:"Judi",score:"40"},{name:"Robin",score:"144"},{name:"Drew",score:"96"},{name:"Emily",score:"6"}],notes:""},
-  {id:"y23h36",timestamp:"2023-07-03T18:06:02",winner:"Emily",players:[{name:"Emily",score:"30"},{name:"Judi",score:"10"},{name:"Drew",score:"28"},{name:"Robin",score:"24"}],notes:""},
-  {id:"y23h37",timestamp:"2023-07-03T19:37:12",winner:"Tommy",players:[{name:"Tommy",score:"32"},{name:"Brooke",score:"28"},{name:"Jon",score:"20"},{name:"Margot",score:"28"}],notes:""},
-  {id:"y23h38",timestamp:"2023-07-03T19:54:21",winner:"Rick",players:[{name:"Rick",score:"34"},{name:"Brooke",score:"20"},{name:"Tommy",score:"24"},{name:"Katie",score:"10"}],notes:""},
-  {id:"y23h39",timestamp:"2023-07-03T20:09:12",winner:"Tommy",players:[{name:"Tommy",score:"64"},{name:"Katie",score:"4"},{name:"Rick",score:"8"},{name:"Brooke",score:"4"}],notes:""},
-  {id:"y23h40",timestamp:"2023-07-03T20:21:53",winner:"Brooke",players:[{name:"Brooke",score:"68"},{name:"Tommy",score:"40"},{name:"Katie",score:"2"},{name:"Rick",score:"24"}],notes:""},
-  {id:"y23h41",timestamp:"2023-07-03T20:40:15",winner:"Katie",players:[{name:"Katie",score:"68"},{name:"Rick",score:"256"},{name:"Brooke",score:"6"},{name:"Tommy",score:"48"}],notes:""},
-  {id:"y23h42",timestamp:"2023-07-03T20:54:06",winner:"Rick",players:[{name:"Rick",score:"60"},{name:"Brooke",score:"10"},{name:"Tommy",score:"96"},{name:"Katie",score:"10"}],notes:""},
-  {id:"y23h43",timestamp:"2023-07-03T21:05:09",winner:"Katie",players:[{name:"Rick",score:"8"},{name:"Brooke",score:"4"},{name:"Tommy",score:"48"},{name:"Katie",score:"84"}],notes:""},
-  {id:"y23h44",timestamp:"2023-07-03T21:40:38",winner:"Rick",players:[{name:"Rick",score:"144"},{name:"Margot",score:"4"},{name:"Jon",score:"96"},{name:"Katie",score:"12"}],notes:""},
-  {id:"y23h45",timestamp:"2023-07-03T22:06:32",winner:"Katie",players:[{name:"Jon",score:"30"},{name:"Robin",score:"8"},{name:"Rick",score:"22"},{name:"Katie",score:"72"}],notes:""},
-  {id:"y23h46",timestamp:"2023-07-03T22:30:44",winner:"Caitlyn",players:[{name:"Caitlyn",score:"54"},{name:"Marissa",score:"88"},{name:"Judi",score:"48"},{name:"Jack",score:"8"}],notes:""},
-  {id:"y23h47",timestamp:"2023-07-03T22:42:06",winner:"Katie",players:[{name:"Katie",score:"30"},{name:"Jon",score:"14"},{name:"Bryan",score:"6"},{name:"Robbie",score:"28"}],notes:""},
-  {id:"y23h48",timestamp:"2023-07-03T22:48:46",winner:"Marissa",players:[{name:"Marissa",score:"24"},{name:"Judi",score:"4"},{name:"Jack",score:"16"},{name:"Caitlyn",score:"80"}],notes:""},
-  {id:"y23h49",timestamp:"2023-07-03T23:02:24",winner:"Bryan",players:[{name:"Bryan",score:"38"},{name:"Robbie",score:"8"},{name:"Katie",score:"12"},{name:"Jon",score:"10"}],notes:""},
-  {id:"y23h50",timestamp:"2023-07-03T23:05:01",winner:"Jack",players:[{name:"Jack",score:"68"},{name:"Caitlyn",score:"8"},{name:"Marissa",score:"0"},{name:"Judi",score:"22"}],notes:""},
-  {id:"y23h51",timestamp:"2023-07-03T23:22:01",winner:"Jack",players:[{name:"Jack",score:"144"},{name:"Jon",score:"48"},{name:"Robbie",score:"64"},{name:"Judi",score:"14"}],notes:""},
-  {id:"y23h52",timestamp:"2023-07-03T23:27:37",winner:"Dead hand",players:[{name:"Bryan",score:"X"},{name:"Caitlyn",score:"X"},{name:"Katie",score:"X"},{name:"Marissa",score:"X"}],notes:""},
-  {id:"y23h53",timestamp:"2023-07-03T23:45:41",winner:"Robbie",players:[{name:"Robbie",score:"54"},{name:"Marissa",score:"32"},{name:"Caitlyn",score:"32"},{name:"Jack",score:"6"}],notes:""},
-  {id:"y23h54",timestamp:"2023-07-03T23:51:18",winner:"Katie",players:[{name:"Judi",score:"80"},{name:"Bryan",score:"6"},{name:"Jon",score:"12"},{name:"Katie",score:"72"}],notes:""},
-  {id:"y23h55",timestamp:"2023-07-04T00:02:59",winner:"Caitlyn",players:[{name:"Caitlyn",score:"28"},{name:"Robbie",score:"36"},{name:"Marissa",score:"20"},{name:"Jack",score:"8"}],notes:""},
-  {id:"y23h56",timestamp:"2023-07-04T00:11:16",winner:"Katie",players:[{name:"Judi",score:"36"},{name:"Bryan",score:"24"},{name:"Jon",score:"32"},{name:"Katie",score:"152"}],notes:""},
-  {id:"y23h57",timestamp:"2023-07-04T17:34:39",winner:"Sue",players:[{name:"Sue",score:"36"},{name:"Drew",score:"72"},{name:"Rick",score:"6"},{name:"Emily",score:"6"}],notes:""},
-  {id:"y23h58",timestamp:"2023-07-04T19:39:38",winner:"Judi",players:[{name:"Marissa",score:"256"},{name:"Robbie",score:"64"},{name:"Emily",score:"10"},{name:"Judi",score:"34"}],notes:""},
-  {id:"y23h59",timestamp:"2023-07-04T19:54:06",winner:"Brooke",players:[{name:"Brooke",score:"168"},{name:"Marissa",score:"8"},{name:"Robbie",score:"8"},{name:"Emily",score:"36"}],notes:""},
-  {id:"y23h60",timestamp:"2023-07-04T20:06:01",winner:"Tommy",players:[{name:"Tommy",score:"72"},{name:"Judi",score:"8"},{name:"Drew",score:"14"},{name:"Brooke",score:"10"}],notes:""},
-  {id:"y23h61",timestamp:"2023-07-04T20:23:35",winner:"Robbie",players:[{name:"Robbie",score:"38"},{name:"Jon",score:"52"},{name:"Drew",score:"16"},{name:"Tommy",score:"18"}],notes:""},
-  {id:"y23h62",timestamp:"2023-07-04T21:08:04",winner:"Brooke",players:[{name:"Brooke",score:"160"},{name:"Jon",score:"24"},{name:"Margot",score:"16"},{name:"Tommy",score:"20"}],notes:""},
-  {id:"y23h63",timestamp:"2023-07-04T21:13:36",winner:"Katherine",players:[{name:"Katherine",score:"76"},{name:"Robbie",score:"40"},{name:"Marissa",score:"2"},{name:"Caitlyn",score:"6"}],notes:"Guest is Aunt Katherine"},
-  {id:"y23h64",timestamp:"2023-07-04T21:25:28",winner:"Rick",players:[{name:"Katie",score:"6"},{name:"Margot",score:"24"},{name:"Jon",score:"16"},{name:"Rick",score:"34"}],notes:""},
-  {id:"y23h65",timestamp:"2023-07-04T22:48:47",winner:"Judi",players:[{name:"Judi",score:"152"},{name:"Robbie",score:"16"},{name:"Katherine",score:"64"},{name:"Marissa",score:"20"}],notes:"Guest was Aunt Katherine"},
-  {id:"y23h66",timestamp:"2023-07-05T17:10:07",winner:"Robbie",players:[{name:"Robbie",score:"32"},{name:"Bryan",score:"28"},{name:"Marissa",score:"32"},{name:"Judi",score:"12"}],notes:""},
-  {id:"y23h67",timestamp:"2023-07-05T17:31:52",winner:"Robbie",players:[{name:"Marissa",score:"448"},{name:"Robbie",score:"40"},{name:"Bryan",score:"56"},{name:"Judi",score:"18"}],notes:""},
-  {id:"y23h68",timestamp:"2023-07-05T17:49:58",winner:"Bryan",players:[{name:"Bryan",score:"36"},{name:"Judi",score:"52"},{name:"Robbie",score:"160"},{name:"Marissa",score:"32"}],notes:""},
-];
-
-const H1920 = [
-  {id:"y1920h1",timestamp:"2019-12-22T12:00:00",winner:"Katie",players:[{name:"Rick",score:"24"},{name:"Katie",score:"184"},{name:"Brooke",score:"68"},{name:"Tommy",score:"18"}],notes:""},
-  {id:"y1920h2",timestamp:"2019-12-22T12:00:00",winner:"Brooke",players:[{name:"Rick",score:"120"},{name:"Katie",score:"10"},{name:"Brooke",score:"60"},{name:"Tommy",score:"24"}],notes:""},
-  {id:"y1920h3",timestamp:"2019-12-22T12:00:00",winner:"Katie",players:[{name:"Rick",score:"24"},{name:"Katie",score:"88"},{name:"Brooke",score:"12"},{name:"Tommy",score:"10"}],notes:""},
-  {id:"y1920h4",timestamp:"2019-12-22T12:00:00",winner:"Rick",players:[{name:"Rick",score:"96"},{name:"Margot",score:"28"},{name:"Katie",score:"4"},{name:"Brooke",score:"10"}],notes:""},
-  {id:"y1920h5",timestamp:"2019-12-22T12:00:00",winner:"Katie",players:[{name:"Rick",score:"16"},{name:"Katie",score:"72"},{name:"Brooke",score:"8"},{name:"Tommy",score:"10"}],notes:""},
-  {id:"y1920h6",timestamp:"2019-12-22T12:00:00",winner:"Katie",players:[{name:"Rick",score:"10"},{name:"Katie",score:"68"},{name:"Brooke",score:"14"},{name:"Tommy",score:"14"}],notes:""},
-  {id:"y1920h7",timestamp:"2019-12-22T12:00:00",winner:"Katie",players:[{name:"Rick",score:"20"},{name:"Katie",score:"36"},{name:"Brooke",score:"18"},{name:"Tommy",score:"28"}],notes:""},
-  {id:"y1920h8",timestamp:"2019-12-22T12:00:00",winner:"Brooke",players:[{name:"Rick",score:"24"},{name:"Katie",score:"28"},{name:"Brooke",score:"184"},{name:"Tommy",score:"12"}],notes:""},
-  {id:"y1920h9",timestamp:"2019-12-22T12:00:00",winner:"Brooke",players:[{name:"Rick",score:"16"},{name:"Katie",score:"8"},{name:"Brooke",score:"60"},{name:"Tommy",score:"80"}],notes:""},
-  {id:"y1920h10",timestamp:"2019-12-22T12:00:00",winner:"Rick",players:[{name:"Rick",score:"960"},{name:"Katie",score:"8"},{name:"Brooke",score:"32"},{name:"Tommy",score:"96"}],notes:""},
-  {id:"y1920h11",timestamp:"2019-12-22T12:00:00",winner:"Katie",players:[{name:"Rick",score:"8"},{name:"Katie",score:"64"},{name:"Brooke",score:"6"},{name:"Tommy",score:"16"}],notes:""},
-  {id:"y1920h12",timestamp:"2019-12-22T12:00:00",winner:"Brooke",players:[{name:"Rick",score:"32"},{name:"Katie",score:"10"},{name:"Brooke",score:"34"},{name:"Tommy",score:"12"}],notes:""},
-  {id:"y1920h13",timestamp:"2019-12-22T12:00:00",winner:"Rick",players:[{name:"Rick",score:"32"},{name:"Katie",score:"12"},{name:"Brooke",score:"192"},{name:"Tommy",score:"52"}],notes:""},
-  {id:"y1920h14",timestamp:"2019-12-22T12:00:00",winner:"Rick",players:[{name:"Rick",score:"96"},{name:"Katie",score:"24"},{name:"Brooke",score:"72"},{name:"Tommy",score:"40"}],notes:""},
-  {id:"y1920h15",timestamp:"2019-12-24T12:00:00",winner:"Rick",players:[{name:"Rick",score:"34"},{name:"Margot",score:"10"},{name:"Brooke",score:"4"},{name:"Tommy",score:"4"}],notes:""},
-  {id:"y1920h16",timestamp:"2019-12-24T12:00:00",winner:"Tommy",players:[{name:"Rick",score:"36"},{name:"Margot",score:"4"},{name:"Brooke",score:"6"},{name:"Tommy",score:"28"}],notes:""},
-  {id:"y1920h17",timestamp:"2019-12-25T12:00:00",winner:"Jon",players:[{name:"Jon",score:"100"},{name:"Brooke",score:"10"},{name:"Tommy",score:"56"},{name:"Drew",score:"28"}],notes:""},
-  {id:"y1920h18",timestamp:"2019-12-25T12:00:00",winner:"Tommy",players:[{name:"Jon",score:"14"},{name:"Brooke",score:"10"},{name:"Tommy",score:"92"},{name:"Drew",score:"20"}],notes:""},
-  {id:"y1920h19",timestamp:"2019-12-25T12:00:00",winner:"Brooke",players:[{name:"Jon",score:"28"},{name:"Brooke",score:"80"},{name:"Tommy",score:"20"},{name:"Drew",score:"40"}],notes:""},
-  {id:"y1920h20",timestamp:"2019-12-25T12:00:00",winner:"Margot",players:[{name:"Margot",score:"56"},{name:"Jon",score:"16"},{name:"Brooke",score:"288"},{name:"Tommy",score:"14"}],notes:""},
-  {id:"y1920h21",timestamp:"2019-12-25T12:00:00",winner:"Rick",players:[{name:"Rick",score:"80"},{name:"Jon",score:"10"},{name:"Brooke",score:"10"},{name:"Tommy",score:"32"}],notes:""},
-  {id:"y1920h22",timestamp:"2019-12-25T12:00:00",winner:"Rick",players:[{name:"Rick",score:"64"},{name:"Jon",score:"16"},{name:"Brooke",score:"6"},{name:"Tommy",score:"28"}],notes:""},
-  {id:"y1920h23",timestamp:"2019-12-25T12:00:00",winner:"Jon",players:[{name:"Rick",score:"56"},{name:"Margot",score:"48"},{name:"Katie",score:"4"},{name:"Jon",score:"36"}],notes:""},
-  {id:"y1920h24",timestamp:"2019-12-28T12:00:00",winner:"Tommy",players:[{name:"Rick",score:"20"},{name:"Margot",score:"24"},{name:"Brooke",score:"24"},{name:"Tommy",score:"108"}],notes:""},
-  {id:"y1920h25",timestamp:"2019-12-28T12:00:00",winner:"Rick",players:[{name:"Rick",score:"68"},{name:"Margot",score:"34"},{name:"Brooke",score:"20"},{name:"Tommy",score:"6"}],notes:""},
-  {id:"y1920h26",timestamp:"2019-12-28T12:00:00",winner:"Brooke",players:[{name:"Rick",score:"10"},{name:"Margot",score:"8"},{name:"Brooke",score:"224"},{name:"Tommy",score:"36"}],notes:""},
-  {id:"y1920h27",timestamp:"2019-12-28T12:00:00",winner:"Rick",players:[{name:"Rick",score:"34"},{name:"Margot",score:"6"},{name:"Brooke",score:"80"},{name:"Tommy",score:"20"}],notes:""},
-  {id:"y1920h28",timestamp:"2020-01-02T12:00:00",winner:"Sue",players:[{name:"Margot",score:"28"},{name:"Sue",score:"32"},{name:"Judi",score:"4"},{name:"Eric",score:"44"}],notes:""},
-  {id:"y1920h29",timestamp:"2020-01-02T12:00:00",winner:"Margot",players:[{name:"Margot",score:"30"},{name:"Sue",score:"144"},{name:"Judi",score:"2"},{name:"Eric",score:"8"}],notes:""},
-  {id:"y1920h30",timestamp:"2020-01-02T12:00:00",winner:"Margot",players:[{name:"Margot",score:"48"},{name:"Sue",score:"8"},{name:"Judi",score:"48"},{name:"Eric",score:"16"}],notes:""},
-  {id:"y1920h31",timestamp:"2020-01-02T12:00:00",winner:"Margot",players:[{name:"Rick",score:"4"},{name:"Margot",score:"72"},{name:"Judi",score:"6"},{name:"Eric",score:"4"}],notes:""},
-  {id:"y1920h32",timestamp:"2020-01-02T12:00:00",winner:"Eric",players:[{name:"Rick",score:"8"},{name:"Margot",score:"4"},{name:"Judi",score:"38"},{name:"Eric",score:"88"}],notes:""},
-  {id:"y1920h33",timestamp:"2020-01-02T12:00:00",winner:"Rick",players:[{name:"Rick",score:"144"},{name:"Margot",score:"10"},{name:"Judi",score:"14"},{name:"Eric",score:"104"}],notes:""},
-  {id:"y1920h34",timestamp:"2020-01-02T12:00:00",winner:"Margot",players:[{name:"Rick",score:"2"},{name:"Margot",score:"72"},{name:"Judi",score:"136"},{name:"Eric",score:"18"}],notes:""},
-  {id:"y1920hf1",timestamp:"2020-02-01T12:00:00",winner:"Tommy",players:[{name:"Brooke",score:"6"},{name:"Margot",score:"4"},{name:"Rick",score:"28"},{name:"Tommy",score:"96"}],notes:""},
-  {id:"y1920hf2",timestamp:"2020-02-01T12:00:00",winner:"Tommy",players:[{name:"Brooke",score:"12"},{name:"Margot",score:"8"},{name:"Rick",score:"304"},{name:"Tommy",score:"144"}],notes:""},
-  {id:"y1920hf3",timestamp:"2020-02-01T12:00:00",winner:"Rick",players:[{name:"Brooke",score:"36"},{name:"Margot",score:"8"},{name:"Rick",score:"112"},{name:"Tommy",score:"24"}],notes:""},
-  {id:"y1920hf4",timestamp:"2020-02-01T12:00:00",winner:"Rick",players:[{name:"Brooke",score:"256"},{name:"Margot",score:"18"},{name:"Rick",score:"12"},{name:"Tommy",score:"14"}],notes:""},
-  {id:"y1920hg1",timestamp:"2020-02-16T12:00:00",winner:"Katie",players:[{name:"Brooke",score:"16"},{name:"Jon",score:"96"},{name:"Katie",score:"30"},{name:"Margot",score:"28"}],notes:""},
-  {id:"y1920hg2",timestamp:"2020-02-16T12:00:00",winner:"Jon",players:[{name:"Brooke",score:"104"},{name:"Jon",score:"20"},{name:"Margot",score:"40"},{name:"Tommy",score:"28"}],notes:""},
-  {id:"y1920hg3",timestamp:"2020-02-16T12:00:00",winner:"Brooke",players:[{name:"Brooke",score:"76"},{name:"Jon",score:"20"},{name:"Katie",score:"36"},{name:"Rick",score:"10"}],notes:""},
-];
-
-const H2021 = [
-  {id:"y21h1",timestamp:"2021-03-20T12:00:00",winner:"Robin",players:[{name:"Robin",score:"32"},{name:"Tommy",score:"4"},{name:"Katie",score:"24"},{name:"Jon",score:"36"}],notes:""},
-  {id:"y21h2",timestamp:"2021-03-20T12:00:00",winner:"Brooke",players:[{name:"Robin",score:"8"},{name:"Jon",score:"4"},{name:"Brooke",score:"256"},{name:"Rick",score:"48"}],notes:""},
-  {id:"y21h3",timestamp:"2021-03-21T12:00:00",winner:"Katie",players:[{name:"Robin",score:"48"},{name:"Katie",score:"144"},{name:"Brooke",score:"32"},{name:"Margot",score:"6"}],notes:""},
-  {id:"y21h4",timestamp:"2021-03-21T12:00:00",winner:"Robin",players:[{name:"Robin",score:"24"},{name:"Tommy",score:"112"},{name:"Katie",score:"14"},{name:"Rick",score:"16"}],notes:""},
-  {id:"y21h5",timestamp:"2021-03-21T12:00:00",winner:"Tommy",players:[{name:"Robin",score:"24"},{name:"Tommy",score:"48"},{name:"Jon",score:"8"},{name:"Brooke",score:"16"}],notes:""},
-  {id:"y21h6",timestamp:"2021-03-21T12:00:00",winner:"Margot",players:[{name:"Tommy",score:"4"},{name:"Katie",score:"20"},{name:"Rick",score:"32"},{name:"Margot",score:"24"}],notes:""},
-  {id:"y21h7",timestamp:"2021-03-21T12:00:00",winner:"Brooke",players:[{name:"Jon",score:"12"},{name:"Brooke",score:"92"},{name:"Rick",score:"8"},{name:"Margot",score:"12"}],notes:""},
-  {id:"y21h8",timestamp:"2021-03-22T12:00:00",winner:"Jon",players:[{name:"Robin",score:"16"},{name:"Tommy",score:"36"},{name:"Jon",score:"64"},{name:"Brooke",score:"10"}],notes:""},
-  {id:"y21h9",timestamp:"2021-03-22T12:00:00",winner:"Katie",players:[{name:"Tommy",score:"32"},{name:"Katie",score:"88"},{name:"Jon",score:"16"},{name:"Rick",score:"16"}],notes:""},
-  {id:"y21h10",timestamp:"2021-03-22T12:00:00",winner:"Katie",players:[{name:"Robin",score:"64"},{name:"Tommy",score:"20"},{name:"Katie",score:"60"},{name:"Brooke",score:"8"}],notes:""},
-  {id:"y21h11",timestamp:"2021-03-22T12:00:00",winner:"Margot",players:[{name:"Robin",score:"88"},{name:"Katie",score:"6"},{name:"Jon",score:"4"},{name:"Margot",score:"92"}],notes:""},
-  {id:"y21h12",timestamp:"2021-03-22T12:00:00",winner:"Rick",players:[{name:"Robin",score:"8"},{name:"Brooke",score:"8"},{name:"Rick",score:"30"},{name:"Margot",score:"8"}],notes:""},
-  {id:"y21h14",timestamp:"2021-03-23T12:00:00",winner:"Jon",players:[{name:"Katie",score:"20"},{name:"Jon",score:"300"},{name:"Rick",score:"32"},{name:"Margot",score:"12"}],notes:""},
-  {id:"y21h15",timestamp:"2021-03-23T12:00:00",winner:"Rick",players:[{name:"Tommy",score:"88"},{name:"Jon",score:"14"},{name:"Brooke",score:"10"},{name:"Rick",score:"72"}],notes:""},
-  {id:"y21h16",timestamp:"2021-03-24T12:00:00",winner:"Jon",players:[{name:"Robin",score:"16"},{name:"Jon",score:"64"},{name:"Brooke",score:"18"},{name:"Rick",score:"64"}],notes:""},
-  {id:"y21h17",timestamp:"2021-03-24T12:00:00",winner:"Jon",players:[{name:"Tommy",score:"8"},{name:"Katie",score:"14"},{name:"Jon",score:"44"},{name:"Margot",score:"40"}],notes:""},
-  {id:"y21h18",timestamp:"2021-03-24T12:00:00",winner:"Jon",players:[{name:"Robin",score:"64"},{name:"Jon",score:"80"},{name:"Brooke",score:"6"},{name:"Rick",score:"48"}],notes:""},
-  {id:"y21h19",timestamp:"2021-03-26T12:00:00",winner:"Margot",players:[{name:"Robin",score:"28"},{name:"Tommy",score:"52"},{name:"Rick",score:"20"},{name:"Margot",score:"76"}],notes:""},
-  {id:"y21h20",timestamp:"2021-03-26T12:00:00",winner:"Brooke",players:[{name:"Tommy",score:"6"},{name:"Katie",score:"28"},{name:"Brooke",score:"104"},{name:"Margot",score:"28"}],notes:""},
-  {id:"y21h21",timestamp:"2021-03-26T12:00:00",winner:"Margot",players:[{name:"Jon",score:"32"},{name:"Brooke",score:"0"},{name:"Rick",score:"4"},{name:"Margot",score:"60"}],notes:""},
-  {id:"y21h22",timestamp:"2021-03-26T12:00:00",winner:"Robin",players:[{name:"Robin",score:"92"},{name:"Tommy",score:"16"},{name:"Jon",score:"24"},{name:"Margot",score:"14"}],notes:""},
-  {id:"y21h23",timestamp:"2021-03-26T12:00:00",winner:"Robin",players:[{name:"Robin",score:"32"},{name:"Katie",score:"44"},{name:"Jon",score:"10"},{name:"Rick",score:"20"}],notes:""},
-  {id:"y21h24",timestamp:"2021-03-26T12:00:00",winner:"Robin",players:[{name:"Robin",score:"96"},{name:"Tommy",score:"32"},{name:"Katie",score:"14"},{name:"Brooke",score:"48"}],notes:""},
-  {id:"y21h25",timestamp:"2021-04-04T12:00:00",winner:"Rick",players:[{name:"Katie",score:"14"},{name:"Jon",score:"14"},{name:"Rick",score:"44"},{name:"Margot",score:"6"}],notes:""},
-  {id:"y21h26",timestamp:"2021-04-04T12:00:00",winner:"Rick",players:[{name:"Katie",score:"32"},{name:"Jon",score:"2"},{name:"Rick",score:"64"},{name:"Margot",score:"8"}],notes:""},
-  {id:"y21h27",timestamp:"2021-04-04T12:00:00",winner:"Margot",players:[{name:"Katie",score:"16"},{name:"Jon",score:"4"},{name:"Rick",score:"6"},{name:"Margot",score:"64"}],notes:""},
-  {id:"y21h28",timestamp:"2021-04-04T12:00:00",winner:"Margot",players:[{name:"Katie",score:"8"},{name:"Jon",score:"72"},{name:"Rick",score:"36"},{name:"Margot",score:"60"}],notes:""},
-  {id:"y21h29",timestamp:"2021-04-04T12:00:00",winner:"Jon",players:[{name:"Katie",score:"12"},{name:"Jon",score:"84"},{name:"Rick",score:"8"},{name:"Margot",score:"72"}],notes:""},
-  {id:"y21h31",timestamp:"2021-05-09T12:00:00",winner:"Rick",players:[{name:"Jon",score:"10"},{name:"Brooke",score:"40"},{name:"Rick",score:"300"},{name:"Margot",score:"60"}],notes:""},
-  {id:"y21h32",timestamp:"2021-05-20T12:00:00",winner:"Rick",players:[{name:"Tommy",score:"2"},{name:"Jon",score:"12"},{name:"Brooke",score:"80"},{name:"Rick",score:"64"}],notes:""},
-  {id:"y21h33",timestamp:"2021-05-20T12:00:00",winner:"Katie",players:[{name:"Katie",score:"72"},{name:"Brooke",score:"40"},{name:"Rick",score:"28"},{name:"Margot",score:"80"}],notes:""},
-  {id:"y21h34",timestamp:"2021-05-20T12:00:00",winner:"Jon",players:[{name:"Tommy",score:"28"},{name:"Katie",score:"28"},{name:"Jon",score:"38"},{name:"Margot",score:"16"}],notes:""},
-  {id:"y21h35",timestamp:"2021-05-20T12:00:00",winner:"Tommy",players:[{name:"Tommy",score:"32"},{name:"Jon",score:"48"},{name:"Brooke",score:"88"},{name:"Rick",score:"18"}],notes:""},
-  {id:"y21h36",timestamp:"2021-05-20T12:00:00",winner:"Katie",players:[{name:"Katie",score:"28"},{name:"Jon",score:"16"},{name:"Brooke",score:"28"},{name:"Margot",score:"16"}],notes:""},
-  {id:"y21h37",timestamp:"2021-05-20T12:00:00",winner:"Brooke",players:[{name:"Tommy",score:"12"},{name:"Katie",score:"12"},{name:"Brooke",score:"68"},{name:"Rick",score:"36"}],notes:""},
-  {id:"y21h38",timestamp:"2021-05-20T12:00:00",winner:"Margot",players:[{name:"Jon",score:"2"},{name:"Brooke",score:"104"},{name:"Rick",score:"12"},{name:"Margot",score:"64"}],notes:""},
-  {id:"y21h39",timestamp:"2021-05-20T12:00:00",winner:"Rick",players:[{name:"Tommy",score:"6"},{name:"Brooke",score:"2"},{name:"Rick",score:"68"},{name:"Margot",score:"10"}],notes:""},
-  {id:"y21h40",timestamp:"2021-05-20T12:00:00",winner:"Tommy",players:[{name:"Tommy",score:"30"},{name:"Katie",score:"14"},{name:"Jon",score:"20"},{name:"Rick",score:"10"}],notes:""},
-  {id:"y21h41",timestamp:"2021-05-20T12:00:00",winner:"Rick",players:[{name:"Robin",score:"144"},{name:"Katie",score:"96"},{name:"Jon",score:"24"},{name:"Rick",score:"144"}],notes:""},
-  {id:"y21h42",timestamp:"2021-11-26T12:00:00",winner:"Robin",players:[{name:"Robin",score:"112"},{name:"Katie",score:"28"},{name:"Rick",score:"12"},{name:"Margot",score:"16"}],notes:""},
-  {id:"y21h43",timestamp:"2021-11-26T12:00:00",winner:"Jon",players:[{name:"Robin",score:"16"},{name:"Katie",score:"6"},{name:"Jon",score:"72"},{name:"Rick",score:"74"}],notes:""},
-  {id:"y21h44",timestamp:"2021-11-26T12:00:00",winner:"Rick",players:[{name:"Robin",score:"24"},{name:"Jon",score:"12"},{name:"Rick",score:"168"},{name:"Margot",score:"40"}],notes:""},
-  {id:"y21h45",timestamp:"2021-11-26T12:00:00",winner:"Jon",players:[{name:"Robin",score:"20"},{name:"Katie",score:"16"},{name:"Jon",score:"168"},{name:"Rick",score:"8"}],notes:""},
-  {id:"y21h46",timestamp:"2021-11-26T12:00:00",winner:"Robin",players:[{name:"Robin",score:"40"},{name:"Katie",score:"22"},{name:"Jon",score:"8"},{name:"Rick",score:"192"}],notes:""},
-  {id:"y21h47",timestamp:"2021-11-26T12:00:00",winner:"Dead hand",players:[{name:"Robin",score:"X"},{name:"Katie",score:"X"},{name:"Jon",score:"X"},{name:"Rick",score:"X"}],notes:""},
-  {id:"y21h48",timestamp:"2021-11-26T12:00:00",winner:"Dead hand",players:[{name:"Robin",score:"X"},{name:"Katie",score:"X"},{name:"Jon",score:"X"},{name:"Rick",score:"X"}],notes:""},
-  {id:"y21h49",timestamp:"2021-11-26T12:00:00",winner:"Jon",players:[{name:"Robin",score:"32"},{name:"Katie",score:"24"},{name:"Jon",score:"34"},{name:"Rick",score:"288"}],notes:""},
-  {id:"y21h50",timestamp:"2021-11-26T12:00:00",winner:"Rick",players:[{name:"Tommy",score:"208"},{name:"Jon",score:"32"},{name:"Brooke",score:"72"},{name:"Rick",score:"36"}],notes:""},
-  {id:"y21h51",timestamp:"2021-12-05T12:00:00",winner:"Tommy",players:[{name:"Tommy",score:"52"},{name:"Katie",score:"32"},{name:"Brooke",score:"8"},{name:"Margot",score:"20"}],notes:""},
-  {id:"y21h52",timestamp:"2021-12-05T12:00:00",winner:"Jon",players:[{name:"Tommy",score:"52"},{name:"Katie",score:"112"},{name:"Jon",score:"76"},{name:"Rick",score:"16"}],notes:""},
-  {id:"y21h53",timestamp:"2021-12-05T12:00:00",winner:"Katie",players:[{name:"Tommy",score:"80"},{name:"Katie",score:"30"},{name:"Brooke",score:"8"},{name:"Rick",score:"16"}],notes:""},
-  {id:"y21h54",timestamp:"2021-12-25T12:00:00",winner:"Katie",players:[{name:"Tommy",score:"144"},{name:"Katie",score:"84"},{name:"Jon",score:"12"},{name:"Margot",score:"8"}],notes:""},
-  {id:"y21h55",timestamp:"2021-12-25T12:00:00",winner:"Rick",players:[{name:"Tommy",score:"64"},{name:"Katie",score:"40"},{name:"Brooke",score:"36"},{name:"Rick",score:"34"}],notes:""},
-  {id:"y21h56",timestamp:"2021-12-25T12:00:00",winner:"Katie",players:[{name:"Tommy",score:"32"},{name:"Katie",score:"152"},{name:"Jon",score:"32"},{name:"Margot",score:"32"}],notes:""},
-  {id:"y21h57",timestamp:"2021-12-25T12:00:00",winner:"Katie",players:[{name:"Katie",score:"68"},{name:"Jon",score:"16"},{name:"Brooke",score:"24"},{name:"Rick",score:"2"}],notes:""},
-  {id:"y21h58",timestamp:"2021-12-25T12:00:00",winner:"Margot",players:[{name:"Tommy",score:"40"},{name:"Katie",score:"80"},{name:"Brooke",score:"16"},{name:"Margot",score:"38"}],notes:""},
-  {id:"y21h59",timestamp:"2021-12-25T12:00:00",winner:"Rick",players:[{name:"Tommy",score:"20"},{name:"Katie",score:"12"},{name:"Jon",score:"10"},{name:"Rick",score:"28"}],notes:""},
-  {id:"y21h60",timestamp:"2021-12-25T12:00:00",winner:"Brooke",players:[{name:"Tommy",score:"44"},{name:"Katie",score:"108"},{name:"Brooke",score:"56"},{name:"Rick",score:"6"}],notes:""},
-];
 
 const WORKER_URL = "https://oakley-mahjong-worker.catherine-e-woodward.workers.dev";
 
@@ -327,15 +115,6 @@ async function deleteHand(rowIndex) {
   return resp.json();
 }
 
-async function migrateLegacyData(allRows) {
-  // Send all rows in one batch request
-  const resp = await fetch(WORKER_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "batchAppend", rows: allRows }),
-  });
-  return resp.json();
-}
 
 function computeLeaderboard(hands) {
   const stats = {};
@@ -923,10 +702,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState(null);
-  const [showMigrate, setShowMigrate] = useState(false);
-  const [migrating, setMigrating] = useState(false);
 
-  const ALL_LEGACY_ROWS = [...H1920.map(h => handToRow(h, "2019-2020")), ...H2021.map(h => handToRow(h, "2021")), ...H2023.map(h => handToRow(h, "2023")), ...H.map(h => handToRow(h, "2024"))];
 
   const loadData = async () => {
     try {
@@ -934,8 +710,6 @@ function App() {
       const hands = await fetchAllHands();
       setAllHands(hands);
       setLastSynced(new Date());
-      // Check if sheet is empty (needs migration)
-      if (hands.length === 0) setShowMigrate(true);
     } catch(e) {
       showToast("Could not connect to database.", "err");
     } finally {
@@ -1001,19 +775,6 @@ function App() {
     }
   };
 
-  const doMigrate = async () => {
-    setMigrating(true);
-    try {
-      await migrateLegacyData(ALL_LEGACY_ROWS);
-      await loadData();
-      setShowMigrate(false);
-      showToast("Historical data loaded!");
-    } catch(e) {
-      showToast("Migration error. Try again.", "err");
-    } finally {
-      setMigrating(false);
-    }
-  };
 
   const doNewSeason = async () => {
     if (!nsName.trim()) return;
@@ -1045,19 +806,6 @@ function App() {
         />
       )}
 
-      {showMigrate && isAdmin && (
-        <div style={S.overlay}>
-          <div style={S.modal}>
-            <h3 style={S.modalTitle}>Load Historical Data</h3>
-            <p style={S.modalSub}>The database is empty. Load all historical seasons (2019-2020 through 2024) into Google Sheets now?</p>
-            <p style={{fontSize:12,color:"#5a7aaa",marginBottom:8}}>This will take about 30-60 seconds.</p>
-            <div style={S.modalBtns}>
-              <button style={S.btnSec} onClick={() => setShowMigrate(false)}>Skip</button>
-              <button style={S.btnPri} onClick={doMigrate} disabled={migrating}>{migrating ? "Loading..." : "Load Historical Data"}</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {showNS && (
         <div style={S.overlay}>
