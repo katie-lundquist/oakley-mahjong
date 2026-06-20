@@ -111,12 +111,22 @@ async function appendHand(hand, season) {
 
 async function updateHand(hand, season) {
   const row = handToRow(hand, season);
-  const range = "Sheet1!A" + (hand.rowIndex + 1);
+
   const resp = await fetch(WORKER_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "update", range, row }),
+    body: JSON.stringify({
+      action: "update",
+      rowIndex: hand.rowIndex,
+      row,
+    }),
   });
+
+  if (!resp.ok) {
+    const error = await resp.json().catch(() => ({}));
+    throw new Error(error.error || "Unable to update hand");
+  }
+
   return resp.json();
 }
 
@@ -446,6 +456,7 @@ function ScoreForm({ onSubmit, editHand, onCancel, knownPlayers, onDirtyChange }
       players: players.map(p => ({ name: p.isNew ? p.name.trim() : p.name, score: isDead ? "X" : p.score })),
       timestamp: editHand ? editHand.timestamp : new Date().toLocaleString("sv-SE", { timeZone: "America/Los_Angeles" }).replace(" ", "T"),
       id: editHand ? editHand.id : String(Date.now()),
+      rowIndex: editHand ? editHand.rowIndex : undefined,
     });
   };
 
