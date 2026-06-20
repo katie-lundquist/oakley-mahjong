@@ -90,7 +90,7 @@ function handToRow(hand, season) {
 async function fetchAllHands() {
   const resp = await fetch(WORKER_URL);
   const data = await resp.json();
-  const rows = data.values || [];
+  const rows = data.hands?.values || data.values || [];
   // Skip header row (index 0), convert remaining rows
   const hands = [];
   for (let i = 1; i < rows.length; i++) {
