@@ -51,14 +51,15 @@ function rowToHand(row, rowIndex) {
     rowIndex: rowIndex,
     timestamp: row[0] || "",
     season: row[1] || "",
-    winner: row[2] || "",
+    event: row[2] || "",
+    winner: row[3] || "",
     players: [
-      { name: row[3] || "", score: row[4] || "" },
-      { name: row[5] || "", score: row[6] || "" },
-      { name: row[7] || "", score: row[8] || "" },
-      { name: row[9] || "", score: row[10] || "" },
+      { name: row[4] || "", score: row[5] || "" },
+      { name: row[6] || "", score: row[7] || "" },
+      { name: row[8] || "", score: row[9] || "" },
+      { name: row[10] || "", score: row[11] || "" },
     ],
-    notes: row[11] || "",
+    notes: row[12] || "",
   };
 }
 
@@ -68,9 +69,11 @@ function handToRow(hand, season) {
     console.error("handToRow received invalid hand:", hand);
     return null;
   }
+
   return [
     hand.timestamp,
     season,
+    hand.event || "",
     hand.winner,
     hand.players[0]?.name || "",
     hand.players[0]?.score || "",
