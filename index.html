@@ -20,7 +20,7 @@
     const { useState, useEffect, useMemo } = React;
 
 
-const PLAYERS = ["Alex","Brooke","Bryan","Caitlyn","David","Dick","Drew","Elana","Emily","Jack","James","Jon","Judi","Kaity","Katie","Margot","Marissa","Rick","Robbie","Robin","Sue","Tommy","Guest 1","Guest 2","Guest 3","Guest 4"];
+const BASE_PLAYERS = ["Brooke","Bryan","Caitlyn","Drew","Emily","Jack","Jon","Judi","Katie","Margot","Marissa","Rick","Robbie","Robin","Sue","Tommy"];
 const ADMIN_PIN = "3395";
 const CURRENT_SEASON = "2026";
 const STORAGE_KEY = "mj-hands-2026";
@@ -465,33 +465,50 @@ function InstrBox() {
       </Sec>
       <div style={S.instrDivider} />
       <Sec id="new" title="New players">
-        <div style={S.liRow}><span style={S.liBullet}>-</span><span>Not on the list? Submit under a Guest slot and contact the admin to add you.</span></div>
+        <div style={S.liRow}><span style={S.liBullet}>-</span><span>Not on the list? Type your name in the free text field that appears when you select "+ New Player" from the dropdown.</span></div>
       </Sec>
     </div>
   );
 }
 
-function ScoreForm({ onSubmit, editHand, onCancel }) {
-  const blank = { name: "", score: "" };
+function ScoreForm({ onSubmit, editHand, onCancel, knownPlayers }) {
+  const blank = { name: "", score: "", isNew: false };
   const [winner, setWinner] = useState(editHand ? editHand.winner : "");
-  const [players, setPlayers] = useState(editHand ? editHand.players : [{ ...blank }, { ...blank }, { ...blank }, { ...blank }]);
+  const [winnerIsNew, setWinnerIsNew] = useState(false);
+  const [winnerNewText, setWinnerNewText] = useState("");
+  const [players, setPlayers] = useState(editHand ? editHand.players.map(p => ({ ...p, isNew: false })) : [{ ...blank }, { ...blank }, { ...blank }, { ...blank }]);
   const [notes, setNotes] = useState(editHand ? editHand.notes : "");
   const [errors, setErrors] = useState({});
   const isDead = winner === "Dead hand";
 
+  // Merge base + known players, deduplicated and sorted
+  const allKnown = [...new Set([...BASE_PLAYERS, ...knownPlayers])].sort();
+  const NEW_PLAYER_SENTINEL = "__new__";
+
+  const effectiveWinner = winnerIsNew ? winnerNewText.trim() : winner;
+
   const setPlayer = (i, f, v) => { const p = [...players]; p[i] = { ...p[i], [f]: v }; setPlayers(p); };
-  const usedNames = players.map(p => p.name).filter(Boolean);
+  const setPlayerNew = (i, isNew) => { const p = [...players]; p[i] = { ...p[i], isNew, name: isNew ? "" : p[i].name }; setPlayers(p); };
+
+  const usedNames = players.map(p => p.isNew ? p.name : p.name).filter(Boolean);
 
   const validate = () => {
     const e = {};
-    if (!winner) e.winner = "Required";
+    if (!effectiveWinner) e.winner = "Required";
+    if (winnerIsNew && !winnerNewText.trim()) e.winner = "Please enter the player name";
     players.forEach((p, i) => {
-      if (!p.name) e["name" + i] = "Required";
+      const name = p.isNew ? p.name.trim() : p.name;
+      if (!name) e["name" + i] = "Required";
+      if (p.isNew && !p.name.trim()) e["name" + i] = "Please enter the player name";
       if (!isDead && (p.score === "" || isNaN(Number(p.score)))) e["score" + i] = "Required";
     });
-    const names = players.map(p => p.name).filter(Boolean);
+    const names = players.map(p => p.isNew ? p.name.trim() : p.name).filter(Boolean);
     if (new Set(names).size !== names.length) e.dup = "Players must be unique";
-    if (!isDead && winner && !players.find(p => p.name === winner)) e.winnerMatch = "Winner must be one of the 4 players";
+    const winnerName = effectiveWinner;
+    if (!isDead && winnerName && winnerName !== "Dead hand") {
+      const playerNames = players.map(p => p.isNew ? p.name.trim() : p.name);
+      if (!playerNames.includes(winnerName)) e.winnerMatch = "Winner must be one of the 4 players";
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -499,14 +516,14 @@ function ScoreForm({ onSubmit, editHand, onCancel }) {
   const handleSubmit = () => {
     if (!validate()) return;
     onSubmit({
-      winner, notes,
-      players: players.map(p => ({ name: p.name, score: isDead ? "X" : p.score })),
-      timestamp: editHand ? editHand.timestamp : new Date().toISOString(),
+      winner: effectiveWinner, notes,
+      players: players.map(p => ({ name: p.isNew ? p.name.trim() : p.name, score: isDead ? "X" : p.score })),
+      timestamp: editHand ? editHand.timestamp : new Date().toLocaleString("sv-SE", { timeZone: "America/Los_Angeles" }).replace(" ", "T"),
       id: editHand ? editHand.id : String(Date.now()),
     });
   };
 
-  const opts = (idx) => PLAYERS.filter(n => !usedNames.includes(n) || n === players[idx].name);
+  const opts = (idx) => allKnown.filter(n => !usedNames.includes(n) || n === players[idx].name);
 
   return (
     <div style={S.formCard}>
@@ -515,13 +532,25 @@ function ScoreForm({ onSubmit, editHand, onCancel }) {
 
       <div style={S.fg}>
         <label style={S.lbl}>Who went out? <span style={S.req}>*</span></label>
-        <select style={S.sel} value={winner} onChange={e => setWinner(e.target.value)}>
-          <option value="">Select</option>
-          <option value="Dead hand">Dead hand</option>
-          <optgroup label="Players">
-            {PLAYERS.map(n => <option key={n} value={n}>{n}</option>)}
-          </optgroup>
-        </select>
+        {winnerIsNew ? (
+          <div style={S.newPlayerRow}>
+            <input autoFocus style={S.newPlayerInput} placeholder="Enter player name" value={winnerNewText}
+              onChange={e => setWinnerNewText(e.target.value)} />
+            <button style={S.newPlayerCancel} onClick={() => { setWinnerIsNew(false); setWinnerNewText(""); }}>Cancel</button>
+          </div>
+        ) : (
+          <select style={S.sel} value={winner} onChange={e => {
+            if (e.target.value === NEW_PLAYER_SENTINEL) { setWinnerIsNew(true); setWinner(""); }
+            else setWinner(e.target.value);
+          }}>
+            <option value="">Select</option>
+            <option value="Dead hand">Dead hand</option>
+            <optgroup label="Players">
+              {allKnown.map(n => <option key={n} value={n}>{n}</option>)}
+            </optgroup>
+            <option value={NEW_PLAYER_SENTINEL}>+ New Player</option>
+          </select>
+        )}
         {errors.winner && <span style={S.err}>{errors.winner}</span>}
         {errors.winnerMatch && <span style={S.err}>{errors.winnerMatch}</span>}
       </div>
@@ -532,10 +561,22 @@ function ScoreForm({ onSubmit, editHand, onCancel }) {
         {players.map((p, i) => (
           <div key={i} style={S.pcell}>
             <div style={S.plbl}>Player {i + 1}</div>
-            <select style={S.sel} value={p.name} onChange={e => setPlayer(i, "name", e.target.value)}>
-              <option value="">Name</option>
-              {opts(i).map(n => <option key={n} value={n}>{n}</option>)}
-            </select>
+            {p.isNew ? (
+              <div style={S.newPlayerRow}>
+                <input autoFocus style={S.newPlayerInputSm} placeholder="Enter name" value={p.name}
+                  onChange={e => setPlayer(i, "name", e.target.value)} />
+                <button style={S.newPlayerCancel} onClick={() => setPlayerNew(i, false)}>Cancel</button>
+              </div>
+            ) : (
+              <select style={S.sel} value={p.name} onChange={e => {
+                if (e.target.value === NEW_PLAYER_SENTINEL) setPlayerNew(i, true);
+                else setPlayer(i, "name", e.target.value);
+              }}>
+                <option value="">Name</option>
+                {opts(i).map(n => <option key={n} value={n}>{n}</option>)}
+                <option value={NEW_PLAYER_SENTINEL}>+ New Player</option>
+              </select>
+            )}
             {errors["name" + i] && <span style={S.err}>{errors["name" + i]}</span>}
             {!isDead && (
               <div>
@@ -620,12 +661,55 @@ function Leaderboard({ hands, season }) {
 }
 
 function HandHistory({ hands, onEdit, onDelete, isAdmin, onNeedPin }) {
-  const sorted = [...hands].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-  const fmt = ts => { const d = new Date(ts); return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + " " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }); };
+  const [sortBy, setSortBy] = useState("date-desc");
+  const [filterPlayer, setFilterPlayer] = useState("all");
+
+  // All players who appear in any hand
+  const allPlayers = [...new Set(hands.flatMap(h => h.players.map(p => p.name)).filter(Boolean))].sort();
+
+  // Filter
+  const filtered = filterPlayer === "all" ? hands : hands.filter(h => h.players.some(p => p.name === filterPlayer));
+
+  // Sort
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortBy === "date-desc") return new Date(b.timestamp) - new Date(a.timestamp);
+    if (sortBy === "date-asc") return new Date(a.timestamp) - new Date(b.timestamp);
+    if (sortBy === "winner") return a.winner.localeCompare(b.winner);
+    if (sortBy === "high-score") {
+      const maxScore = h => Math.max(...h.players.map(p => Number(p.score) || 0));
+      return maxScore(b) - maxScore(a);
+    }
+    return 0;
+  });
+
+  const fmt = ts => { const d = new Date(ts); return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Los_Angeles" }) + " " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" }); };
   const act = fn => isAdmin ? fn() : onNeedPin(fn);
+
   return (
     <div>
-      {sorted.length === 0 && <div style={S.empty}>No hands recorded yet.</div>}
+      <div style={S.historyControls}>
+        <div style={S.historyControl}>
+          <label style={S.historyControlLabel}>Sort by</label>
+          <select style={S.historySelect} value={sortBy} onChange={e => setSortBy(e.target.value)}>
+            <option value="date-desc">Date (newest first)</option>
+            <option value="date-asc">Date (oldest first)</option>
+            <option value="winner">Winner (A-Z)</option>
+            <option value="high-score">High score</option>
+          </select>
+        </div>
+        <div style={S.historyControl}>
+          <label style={S.historyControlLabel}>Filter by player</label>
+          <select style={S.historySelect} value={filterPlayer} onChange={e => setFilterPlayer(e.target.value)}>
+            <option value="all">All players</option>
+            {allPlayers.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+        {filterPlayer !== "all" && (
+          <div style={S.historyCount}>{sorted.length} hand{sorted.length !== 1 ? "s" : ""}</div>
+        )}
+      </div>
+
+      {sorted.length === 0 && <div style={S.empty}>No hands found.</div>}
       <div style={S.hList}>
         {sorted.map(h => (
           <div key={h.id} style={S.hCard}>
@@ -864,6 +948,7 @@ function App() {
   const seasonsInData = [...new Set(allHands.map(h => h.season).filter(Boolean))];
   const seasonOrder = { "2026": 6, "2024": 5, "2023": 4, "2021": 3, "2019-2020": 2 };
   const allSeasons = [...new Set([CURRENT_SEASON, ...seasonsInData])].sort((a, b) => (seasonOrder[b] || 0) - (seasonOrder[a] || 0));
+  const knownPlayers = [...new Set(allHands.flatMap(h => h.players.map(p => p.name)).filter(Boolean))].sort();
 
   const doSubmit = async (hand) => {
     try {
@@ -983,7 +1068,7 @@ function App() {
       {editing && (
         <div style={S.overlay}>
           <div style={{ ...S.modal, maxWidth: 560, width: "95%", padding: 0, background: "transparent", boxShadow: "none" }}>
-            <ScoreForm editHand={editing} onSubmit={doEdit} onCancel={() => setEditing(null)} />
+            <ScoreForm editHand={editing} onSubmit={doEdit} onCancel={() => setEditing(null)} knownPlayers={knownPlayers} />
           </div>
         </div>
       )}
@@ -1027,7 +1112,7 @@ function App() {
           </div>
         )}
         {tab === "leaderboard" && <Leaderboard hands={seasonHands} season={season} />}
-        {tab === "submit" && isCurrent && <ScoreForm onSubmit={doSubmit} />}
+        {tab === "submit" && isCurrent && <ScoreForm onSubmit={doSubmit} knownPlayers={knownPlayers} />}
         {tab === "history" && <HandHistory hands={seasonHands} isAdmin={isAdmin} onEdit={h => setEditing(h)} onDelete={h => doDelete(h)} onNeedPin={fn => requireAdmin(fn)} />}
         {tab === "resources" && <Resources />}
       </div>
@@ -1102,7 +1187,11 @@ const S = {
   ta: { width: "100%", padding: "9px 10px", border: "1px solid #d1c4a8", borderRadius: 6, fontSize: 14, background: "#f7f9fd", resize: "vertical", boxSizing: "border-box", fontFamily: "Roboto, sans-serif" },
   fbtns: { display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 },
   err: { display: "block", fontSize: 12, color: "#e53e3e", marginTop: 4 },
-  hList: { display: "flex", flexDirection: "column", gap: 10 },
+  historyControls: { display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 16 },
+  historyControl: { display: "flex", flexDirection: "column", gap: 4 },
+  historyControlLabel: { fontSize: 11, color: "#5a7aaa", textTransform: "uppercase", letterSpacing: 0.4 },
+  historySelect: { padding: "6px 10px", border: "1px solid #c8d4e8", borderRadius: 6, fontSize: 13, background: "#fff", color: "#002676", cursor: "pointer" },
+  historyCount: { fontSize: 13, color: "#5a7aaa", alignSelf: "flex-end", paddingBottom: 6 },
   hCard: { background: "#fff", border: "1px solid #e0d5c0", borderRadius: 8, padding: 14 },
   hHdr: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, flexWrap: "wrap", gap: 8 },
   hWinner: { fontWeight: 700, fontSize: 15, display: "block" },
