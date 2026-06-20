@@ -262,6 +262,10 @@ function rowToHand(row, rowIndex) {
 
 // Convert a hand object to a sheet row
 function handToRow(hand, season) {
+  if (!hand || !hand.players || !Array.isArray(hand.players)) {
+    console.error("handToRow received invalid hand:", hand);
+    return null;
+  }
   return [
     hand.timestamp,
     season,
@@ -294,6 +298,7 @@ async function fetchAllHands() {
 
 async function appendHand(hand, season) {
   const row = handToRow(hand, season);
+  if (!row) { console.error("appendHand: invalid row, skipping"); return; }
   const resp = await fetch(WORKER_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -513,8 +518,12 @@ function ScoreForm({ onSubmit, editHand, onCancel, knownPlayers }) {
     return Object.keys(e).length === 0;
   };
 
+  const [submitting, setSubmitting] = useState(false);
+
   const handleSubmit = () => {
+    if (submitting) return;
     if (!validate()) return;
+    setSubmitting(true);
     onSubmit({
       winner: effectiveWinner, notes,
       players: players.map(p => ({ name: p.isNew ? p.name.trim() : p.name, score: isDead ? "X" : p.score })),
@@ -597,7 +606,7 @@ function ScoreForm({ onSubmit, editHand, onCancel, knownPlayers }) {
 
       <div style={S.fbtns}>
         {onCancel && <button style={S.btnSec} onClick={onCancel}>Cancel</button>}
-        <button style={S.btnPri} onClick={handleSubmit}>{editHand ? "Save Changes" : "Submit Scores"}</button>
+        <button style={S.btnPri} onClick={handleSubmit} disabled={submitting}>{submitting ? "Saving..." : editHand ? "Save Changes" : "Submit Scores"}</button>
       </div>
     </div>
   );
