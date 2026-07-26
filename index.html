@@ -73,12 +73,7 @@ function getVisibleEvents(events, season) {
 }
 
 function getEventDisplayLabel(event, season) {
-  const label = event.label || event.id;
-  const seasonPrefix = String(season) + " ";
-
-  return label.startsWith(seasonPrefix)
-    ? label.slice(seasonPrefix.length)
-    : label;
+  return event.label || event.id;
 }
 
 // Convert a sheet row to a hand object
@@ -420,7 +415,7 @@ function InstrBox() {
         {[
           ["Players are ranked after ", <strong>3 total hands</strong>, ", including at least 1 scoring hand."],
           ["Dead hands count toward the 3-hand minimum but do not affect Avg Score or Mahjong Rate."],
-          [<strong>Combined Rank</strong>, " = Score Rank + Mahjong Rank. Lower is better."],
+          [<strong>Combined Score</strong>, " = Score Rank + Mahjong Rank. Lower is better."],
           [<strong>Mahjong rate</strong>, " = % of hands where you went out. Rewards consistency over volume."],
         ].map((parts, i) => (
           <div key={i} style={S.liRow}><span style={S.liBullet}>-</span><span>{parts.map((p,j) => <span key={j}>{p}</span>)}</span></div>
@@ -517,6 +512,7 @@ function ScoreForm({ onSubmit, editHand, onCancel, knownPlayers, onDirtyChange }
       winner: effectiveWinner, notes,
       players: players.map(p => ({ name: p.isNew ? p.name.trim() : p.name, score: isDead ? "X" : p.score })),
       timestamp: editHand ? editHand.timestamp : new Date().toLocaleString("sv-SE", { timeZone: "America/Los_Angeles" }).replace(" ", "T"),
+      event: editHand ? editHand.event || "" : "",
       id: editHand ? editHand.id : String(Date.now()),
       rowIndex: editHand ? editHand.rowIndex : undefined,
     });
@@ -628,7 +624,7 @@ function Leaderboard({ hands, season, isCurrent }) {
       </div>
 
       <div style={S.rankingSummary}>
-        <div style={S.rankingRule}>Combined Rank = Score Rank + Mahjong Rank. Lower is better.</div>
+        <div style={S.rankingRule}>Combined Score = Score Rank + Mahjong Rank. Lower is better.</div>
         <div style={S.rankingDetail}>Players are ranked after 3 total hands, including at least 1 scoring hand.</div>
       </div>
 
@@ -641,7 +637,7 @@ function Leaderboard({ hands, season, isCurrent }) {
           <table style={S.tbl}>
             <thead>
               <tr>
-                {["Rank", "Player", "Scoring Hands", "Avg Score", "Score Rank", "Mahjong Rate", "Mahjong Rank", "Combined Rank"].map((header, i) => (
+                {["Rank", "Player", "Combined Score", "Score Rank", "Mahjong Rank", "Scoring Hands", "Avg Score", "Mahjong Rate"].map((header, i) => (
                   <th key={header} style={i === 0 ? S.thRank : i === 1 ? S.thName : S.th}>{header}</th>
                 ))}
               </tr>
@@ -651,12 +647,12 @@ function Leaderboard({ hands, season, isCurrent }) {
                 <tr key={p.name} style={i % 2 === 0 ? S.trE : S.trO}>
                   <td style={S.tdR}>{medal(p.overallRank) || p.overallRank}</td>
                   <td style={S.tdN}>{p.name}</td>
+                  <td style={{ ...S.td, fontWeight: 700 }}>{p.combinedScore}</td>
+                  <td style={S.td}>{p.avgScoreRank}</td>
+                  <td style={S.td}>{p.mahjongRateRank}</td>
                   <td style={S.td}>{p.scoringHands}</td>
                   <td style={S.td}>{p.avgScore.toFixed(0)}</td>
-                  <td style={S.td}>{p.avgScoreRank}</td>
                   <td style={S.td}>{pct(p.mahjongRate)} ({p.mahjongs}/{p.scoringHands})</td>
-                  <td style={S.td}>{p.mahjongRateRank}</td>
-                  <td style={{ ...S.td, fontWeight: 700 }}>{p.combinedScore}</td>
                 </tr>
               ))}
             </tbody>
@@ -711,8 +707,6 @@ function HandHistory({ hands, onEdit, onDelete, isAdmin, onNeedPin }) {
   });
 
   const fmt = ts => { const d = new Date(ts); return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Los_Angeles" }) + " " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" }); };
-  const act = fn => isAdmin ? fn() : onNeedPin(fn);
-
   return (
     <div>
       <div style={S.historyControls}>
@@ -746,10 +740,12 @@ function HandHistory({ hands, onEdit, onDelete, isAdmin, onNeedPin }) {
                 <span style={S.hWinner}>{h.winner === "Dead hand" ? "Dead hand" : h.winner + " went out"}</span>
                 <span style={S.hTime}>{fmt(h.timestamp)}</span>
               </div>
-              <div style={S.hActs}>
-                <button style={S.btnSm} onClick={() => act(() => onEdit(h))}>Edit</button>
-                <button style={{ ...S.btnSm, ...S.btnDng }} onClick={() => act(() => onDelete(h))}>Delete</button>
-              </div>
+              {isAdmin && (
+                <div style={S.hActs}>
+                  <button style={S.btnSm} onClick={() => onEdit(h)}>Edit</button>
+                  <button style={{ ...S.btnSm, ...S.btnDng }} onClick={() => onDelete(h)}>Delete</button>
+                </div>
+              )}
             </div>
             <div style={S.hPlayers}>
               {h.players.map((p, i) => (
@@ -788,7 +784,7 @@ function Resources() {
 
       <Sec id="leaderboard" title="Leaderboard scoring (how the Cup is decided)">
         <p style={S.rp}>
-          The leaderboard ranks players by a <strong>Combined Rank</strong>: Score Rank + Mahjong Rank.
+          The leaderboard ranks players by a <strong>Combined Score</strong>: Score Rank + Mahjong Rank.
           Lower is better (like golf).
         </p>
         <div style={S.scoreBox}>
@@ -808,7 +804,7 @@ function Resources() {
           <div style={S.sbPlus}>=</div>
           <div style={S.sbRow}>
             <div>
-              <strong>Combined Rank</strong>
+              <strong>Combined Score</strong>
               <div style={S.sbSub}>Lower is better. Ties remain tied.</div>
             </div>
           </div>
@@ -1295,7 +1291,7 @@ const loadData = async () => {
         }
       >
         <option value="overall">
-          Overall
+          All
         </option>
 
         {visibleEvents.map(event => (
