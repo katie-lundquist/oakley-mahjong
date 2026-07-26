@@ -939,8 +939,6 @@ function App() {
       CURRENT_SEASON
   );
   const [view, setView] = useState("overall");
-  const [filtersReady, setFiltersReady] =
-    useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showPin, setShowPin] = useState(false);
   const [pinCb, setPinCb] = useState(null);
@@ -1025,7 +1023,6 @@ const loadData = async () => {
 
       setSeason(nextSeason);
       setView(nextView);
-      setFiltersReady(true);
 
       localStorage.setItem(
         SELECTED_SEASON_KEY,
