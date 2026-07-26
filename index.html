@@ -39,10 +39,47 @@ const ADMIN_PIN = "3395";
 const CURRENT_SEASON = "2026";
 const STORAGE_KEY = "mj-hands-2026";
 const SEASONS_KEY = "mj-seasons-2026";
+const SELECTED_SEASON_KEY = "mj-selected-season";
+const VIEW_BY_SEASON_KEY = "mj-view-by-season";
 
 const WORKER_URL = "https://oakley-mahjong-worker.catherine-e-woodward.workers.dev";
 const APP_URL = "https://katie-lundquist.github.io/oakley-mahjong/";
 const QR_IMAGE = "./oakley_qr.png";
+    function getStoredViews() {
+  try {
+    return JSON.parse(
+      localStorage.getItem(VIEW_BY_SEASON_KEY) || "{}"
+    );
+  } catch (error) {
+    return {};
+  }
+}
+
+function saveViewForSeason(season, view) {
+  const storedViews = getStoredViews();
+  storedViews[season] = view;
+  localStorage.setItem(
+    VIEW_BY_SEASON_KEY,
+    JSON.stringify(storedViews)
+  );
+}
+
+function getVisibleEvents(events, season) {
+  return events.filter(
+    event =>
+      event.season === String(season) &&
+      event.showEventView
+  );
+}
+
+function getEventDisplayLabel(event, season) {
+  const label = event.label || event.id;
+  const seasonPrefix = String(season) + " ";
+
+  return label.startsWith(seasonPrefix)
+    ? label.slice(seasonPrefix.length)
+    : label;
+}
 
 // Convert a sheet row to a hand object
 function rowToHand(row, rowIndex) {
@@ -90,15 +127,37 @@ function handToRow(hand, season) {
 async function fetchAllHands() {
   const resp = await fetch(WORKER_URL);
   const data = await resp.json();
-  const rows = data.hands?.values || data.values || [];
-  // Skip header row (index 0), convert remaining rows
+
+  if (!resp.ok) {
+    throw new Error(
+      data.error || "Unable to load scores"
+    );
+  }
+
+  const rows =
+    data.hands?.values ||
+    data.values ||
+    [];
+
   const hands = [];
+
+  // Skip the header row at index 0.
   for (let i = 1; i < rows.length; i++) {
     if (rows[i] && rows[i][0]) {
       hands.push(rowToHand(rows[i], i));
     }
   }
-  return hands;
+
+  return {
+    hands,
+    events: Array.isArray(data.events)
+      ? data.events
+      : [],
+    activeEvents: Array.isArray(data.activeEvents)
+      ? data.activeEvents
+      : [],
+    eventWarning: data.eventWarning || null,
+  };
 }
 
 async function appendHand(hand, season) {
@@ -871,8 +930,17 @@ function Resources() {
 
 function App() {
   const [allHands, setAllHands] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [activeEvents, setActiveEvents] = useState([]);
   const [tab, setTab] = useState("leaderboard");
-  const [season, setSeason] = useState(CURRENT_SEASON);
+  const [season, setSeason] = useState(
+    () =>
+      localStorage.getItem(SELECTED_SEASON_KEY) ||
+      CURRENT_SEASON
+  );
+  const [view, setView] = useState("overall");
+  const [filtersReady, setFiltersReady] =
+    useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showPin, setShowPin] = useState(false);
   const [pinCb, setPinCb] = useState(null);
@@ -888,16 +956,100 @@ function App() {
   const shareTriggerRef = React.useRef(null);
 
 
-  const loadData = async () => {
+const loadData = async () => {
     try {
       setSyncing(true);
       setLoadError(false);
-      const hands = await fetchAllHands();
-      setAllHands(hands);
+
+      const result = await fetchAllHands();
+
+      setAllHands(result.hands);
+      setEvents(result.events);
+      setActiveEvents(result.activeEvents);
+
+      const seasonsFromHands = [
+        ...new Set(
+          result.hands
+            .map(hand => hand.season)
+            .filter(Boolean)
+        ),
+      ];
+
+      const availableSeasons = new Set([
+        CURRENT_SEASON,
+        ...seasonsFromHands,
+      ]);
+
+      const storedSeason =
+        localStorage.getItem(
+          SELECTED_SEASON_KEY
+        );
+
+      const nextSeason =
+        storedSeason &&
+        availableSeasons.has(storedSeason)
+          ? storedSeason
+          : CURRENT_SEASON;
+
+      const visibleEvents = getVisibleEvents(
+        result.events,
+        nextSeason
+      );
+
+      const storedViews = getStoredViews();
+      const storedView =
+        storedViews[nextSeason];
+
+      const storedViewIsValid =
+        storedView === "overall" ||
+        visibleEvents.some(
+          event => event.id === storedView
+        );
+
+      const activeEvent =
+        result.activeEvents.find(
+          event =>
+            event.season ===
+              String(nextSeason) &&
+            visibleEvents.some(
+              visible =>
+                visible.id === event.id
+            )
+        );
+
+      const nextView = storedViewIsValid
+        ? storedView
+        : activeEvent
+          ? activeEvent.id
+          : "overall";
+
+      setSeason(nextSeason);
+      setView(nextView);
+      setFiltersReady(true);
+
+      localStorage.setItem(
+        SELECTED_SEASON_KEY,
+        nextSeason
+      );
+
+      if (!storedViewIsValid) {
+        saveViewForSeason(
+          nextSeason,
+          nextView
+        );
+      }
+
+      if (result.eventWarning) {
+        console.warn(result.eventWarning);
+      }
+
       setLastSynced(new Date());
-    } catch(e) {
+    } catch (e) {
       setLoadError(true);
-      showToast("Could not connect to database.", "err");
+      showToast(
+        "Could not connect to database.",
+        "err"
+      );
     } finally {
       setSyncing(false);
       setLoading(false);
@@ -915,15 +1067,99 @@ function App() {
   const showToast = (msg, type) => { setToast({ msg, type: type || "ok" }); setTimeout(() => setToast(null), 3000); };
   const requireAdmin = fn => { if (isAdmin) { fn(); return; } setPinCb(() => fn); setShowPin(true); };
 
-  // Filter hands by season
-  const seasonHands = allHands.filter(h => h.season === season);
-  const isCurrent = season === CURRENT_SEASON;
+ // Filter hands by season and optional event view.
+  const seasonHands = allHands.filter(
+    hand => hand.season === season
+  );
+
+  const visibleEvents = getVisibleEvents(
+    events,
+    season
+  );
+
+  const viewIsValid =
+    view === "overall" ||
+    visibleEvents.some(
+      event => event.id === view
+    );
+
+  const effectiveView = viewIsValid
+    ? view
+    : "overall";
+
+  const displayedHands =
+    effectiveView === "overall"
+      ? seasonHands
+      : seasonHands.filter(
+          hand =>
+            hand.event === effectiveView
+        );
+
+  const isCurrent =
+    season === CURRENT_SEASON;
 
   // Get all seasons from data
   const seasonsInData = [...new Set(allHands.map(h => h.season).filter(Boolean))];
   const seasonOrder = { "2026": 6, "2024": 5, "2023": 4, "2021": 3, "2019-2020": 2 };
   const allSeasons = [...new Set([CURRENT_SEASON, ...seasonsInData])].sort((a, b) => (seasonOrder[b] || 0) - (seasonOrder[a] || 0));
   const knownPlayers = [...new Set(allHands.flatMap(h => h.players.map(p => p.name)).filter(Boolean))].sort();
+    const chooseViewForSeason = nextSeason => {
+    const nextVisibleEvents =
+      getVisibleEvents(events, nextSeason);
+
+    const storedView =
+      getStoredViews()[nextSeason];
+
+    if (
+      storedView === "overall" ||
+      nextVisibleEvents.some(
+        event => event.id === storedView
+      )
+    ) {
+      return storedView;
+    }
+
+    const activeEvent =
+      activeEvents.find(
+        event =>
+          event.season ===
+            String(nextSeason) &&
+          nextVisibleEvents.some(
+            visible =>
+              visible.id === event.id
+          )
+      );
+
+    return activeEvent
+      ? activeEvent.id
+      : "overall";
+  };
+
+  const changeSeason = nextSeason => {
+    const nextView =
+      chooseViewForSeason(nextSeason);
+
+    setSeason(nextSeason);
+    setView(nextView);
+
+    localStorage.setItem(
+      SELECTED_SEASON_KEY,
+      nextSeason
+    );
+
+    saveViewForSeason(
+      nextSeason,
+      nextView
+    );
+
+    requestTabChange("leaderboard");
+  };
+
+  const changeView = nextView => {
+    setView(nextView);
+    saveViewForSeason(season, nextView);
+    requestTabChange("leaderboard");
+  };
 
   const doSubmit = async (hand) => {
     try {
@@ -1025,16 +1261,73 @@ function App() {
         <div className="app-header-inner" style={S.hdrInner}>
           <div>
             <div className="app-header-title" style={S.hdrTitle}>Oakley Family Mahjong Cup</div>
-            <div style={{ marginTop: 4 }}>
-              <select style={S.seasonSel} value={season} onChange={e => { setSeason(e.target.value); requestTabChange("leaderboard"); }}>
-                {allSeasons.map(s => <option key={s} value={s}>{s === CURRENT_SEASON ? s + " (current)" : s}</option>)}
-              </select>
-            </div>
+<div style={S.filterRow}>
+  <div style={S.filterControl}>
+    <label style={S.filterLabel}>
+      Season
+    </label>
+
+    <select
+      style={S.seasonSel}
+      value={season}
+      onChange={e =>
+        changeSeason(e.target.value)
+      }
+    >
+      {allSeasons.map(s => (
+        <option key={s} value={s}>
+          {s === CURRENT_SEASON
+            ? s + " (current)"
+            : s}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  {visibleEvents.length > 0 && (
+    <div style={S.filterControl}>
+      <label style={S.filterLabel}>
+        View
+      </label>
+
+      <select
+        style={S.seasonSel}
+        value={effectiveView}
+        onChange={e =>
+          changeView(e.target.value)
+        }
+      >
+        <option value="overall">
+          Overall
+        </option>
+
+        {visibleEvents.map(event => (
+          <option
+            key={event.id}
+            value={event.id}
+          >
+            {getEventDisplayLabel(
+              event,
+              season
+            )}
+          </option>
+        ))}
+      </select>
+    </div>
+  )}
+</div>
           </div>
           <div>
             {isAdmin ? (
               <div style={S.adminRow}>
-                <button style={S.btnAdm} onClick={() => exportCSV(seasonHands, season)}>CSV</button>
+                <button
+  style={S.btnAdm}
+  onClick={() =>
+    exportCSV(displayedHands, season)
+  }
+>
+  CSV
+</button>
                 <span style={S.admBadge}>Admin</span>
               </div>
             ) : (
@@ -1064,9 +1357,33 @@ function App() {
             <button style={S.btnPri} onClick={loadData}>Try again</button>
           </div>
         )}
-        {tab === "leaderboard" && <Leaderboard hands={seasonHands} season={season} isCurrent={isCurrent} />}
-        {tab === "submit" && isCurrent && <ScoreForm onSubmit={doSubmit} knownPlayers={knownPlayers} onDirtyChange={setSubmitDirty} />}
-        {tab === "history" && <HandHistory hands={seasonHands} isAdmin={isAdmin} onEdit={h => setEditing(h)} onDelete={h => doDelete(h)} onNeedPin={fn => requireAdmin(fn)} />}
+{tab === "leaderboard" && (
+  <Leaderboard
+    hands={displayedHands}
+    season={season}
+    isCurrent={isCurrent}
+  />
+)}
+
+{tab === "submit" && isCurrent && (
+  <ScoreForm
+    onSubmit={doSubmit}
+    knownPlayers={knownPlayers}
+    onDirtyChange={setSubmitDirty}
+  />
+)}
+
+{tab === "history" && (
+  <HandHistory
+    hands={displayedHands}
+    isAdmin={isAdmin}
+    onEdit={h => setEditing(h)}
+    onDelete={h => doDelete(h)}
+    onNeedPin={fn =>
+      requireAdmin(fn)
+    }
+  />
+)}
         {tab === "resources" && <Resources />}
       </div>
 
@@ -1085,6 +1402,26 @@ const S = {
   header: { background: "#002676", color: "#f4f6fb", padding: "14px 20px" },
   hdrInner: { maxWidth: 900, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 },
   hdrTitle: { fontSize: 20, fontWeight: 700 },
+    filterRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 6,
+    alignItems: "flex-end",
+  },
+
+  filterControl: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 2,
+  },
+
+  filterLabel: {
+    fontSize: 9,
+    color: "#8aaad0",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
   seasonSel: { background: "transparent", color: "#a8bcd8", border: "1px solid #5a4a32", borderRadius: 4, padding: "2px 6px", fontSize: 13, cursor: "pointer" },
   adminRow: { display: "flex", gap: 6, alignItems: "center" },
   btnAdm: { background: "transparent", border: "1px solid #d1c4a8", color: "#a8bcd8", borderRadius: 4, padding: "4px 10px", fontSize: 12, cursor: "pointer" },
